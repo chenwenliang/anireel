@@ -1,0 +1,13 @@
+# XcodeGen generated (project.yml is the source of truth)
+*.xcodeproj/
+*.xcworkspace/
+# Xcode build artifacts
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+# macOS
+.DS_Store
+# SwiftPM
+.build/
+.swiftpm/

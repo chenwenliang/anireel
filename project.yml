@@ -1,0 +1,62 @@
+name: AniReel
+options:
+  bundleIdPrefix: com.anireel
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  AniReel:
+    type: application
+    platform: iOS
+    sources:
+      - path: AniReel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anireel.app
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+    info:
+      path: AniReel/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: AniReel
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, zh-Hans]
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        NSCameraUsageDescription: AniReel uses the camera to film your scene and turn it into an animated style in real time. Video is processed only on this device.
+        NSMicrophoneUsageDescription: AniReel records sound with your clip. You can still film silently if you decline.
+        NSPhotoLibraryAddUsageDescription: AniReel saves finished clips to your photo library. It never reads your other photos.
+  AniReelTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AniReelTests
+    dependencies:
+      - target: AniReel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anireel.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  AniReel:
+    build:
+      targets:
+        AniReel: all
+        AniReelTests: [test]
+    test:
+      targets:
+        - AniReelTests

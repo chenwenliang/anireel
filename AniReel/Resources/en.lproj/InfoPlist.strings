@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "AniReel";
+"NSCameraUsageDescription" = "AniReel uses the camera to film your scene and turn it into an animated style in real time. Video is processed only on this device.";
+"NSMicrophoneUsageDescription" = "AniReel records sound with your clip. You can still film silently if you decline.";
+"NSPhotoLibraryAddUsageDescription" = "AniReel saves finished clips to your photo library. It never reads your other photos.";

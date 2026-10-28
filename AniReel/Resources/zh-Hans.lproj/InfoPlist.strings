@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "AniReel";
+"NSCameraUsageDescription" = "AniReel 需要使用相机拍摄画面，并实时转换为所选动画风格。视频仅在本机处理。";
+"NSMicrophoneUsageDescription" = "AniReel 会为视频录制声音。拒绝后仍可无声拍摄。";
+"NSPhotoLibraryAddUsageDescription" = "AniReel 会把拍好的视频保存到相册，不会读取你的其他照片。";
