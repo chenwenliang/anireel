@@ -1,4 +1,5 @@
 import CoreVideo
+import Foundation
 import Metal
 
 /// Output size shared by preview and (Phase 2) recording, so what you see is what gets saved.
@@ -10,7 +11,8 @@ enum OutputFormat {
 /// Turns camera frames into stylized frames in pooled BGRA buffers. Called from the camera's video queue.
 final class StyleEngine: @unchecked Sendable {
     private let context: MetalContext
-    private let renderer: StyleRenderer
+    private var renderer: StyleRenderer
+    private let rendererLock = NSLock()
     private let pool: CVPixelBufferPool
     private let inFlight = DispatchSemaphore(value: 2)
 
@@ -18,6 +20,12 @@ final class StyleEngine: @unchecked Sendable {
         self.context = context
         self.renderer = try pack.makeRenderer(context: context)
         pool = try MetalContext.makePixelBufferPool(width: OutputFormat.width, height: OutputFormat.height)
+    }
+
+    /// Switches the live style. The next frame uses the new renderer; a frame already encoding
+    /// keeps the old one alive until it returns.
+    func setRenderer(_ next: StyleRenderer) {
+        rendererLock.withLock { renderer = next }
     }
 
     /// Drops the frame when the GPU is already two frames behind, rather than queueing latency.
@@ -33,6 +41,7 @@ final class StyleEngine: @unchecked Sendable {
             inFlight.signal()
             return
         }
+        let renderer = rendererLock.withLock { self.renderer }
         renderer.encode(source: src.texture, destination: dst.texture, commandBuffer: commandBuffer)
         commandBuffer.addCompletedHandler { [inFlight] buffer in
             withExtendedLifetime((src, dst)) {}

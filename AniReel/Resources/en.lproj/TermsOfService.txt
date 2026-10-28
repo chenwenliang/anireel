@@ -1,0 +1,43 @@
+# AniReel Terms of Service
+
+Effective date: [to be set before release]
+
+These terms apply to your use of the AniReel app. By using the app you agree to them.
+
+## Using AniReel
+
+You may use AniReel for personal and commercial purposes in line with these terms and the Apple Media Services Terms and Conditions. The app is provided by [developer name, to be set before release].
+
+## Your content
+
+The clips you record belong to you. AniReel does not receive or store copies of your clips anywhere except on your iPhone and in your Photos library.
+
+## Respect other people
+
+- Do not record people without their permission where the law requires it.
+- Do not use AniReel to create content that is unlawful, harassing or infringes the rights of others.
+- You are responsible for the clips you record and share.
+
+## Styles
+
+The style names in AniReel describe general artistic looks. AniReel is not affiliated with, endorsed by or connected to any animation studio, film or character.
+
+## Accounts
+
+In this version, accounts are stored only on your iPhone and are used to unlock unlimited recording. You can delete your account at any time in Settings.
+
+## No warranty
+
+AniReel is provided "as is". We work to keep it reliable, but we cannot promise that it will be free of errors, that every recording will succeed, or that it will work on every device.
+
+## Limitation of liability
+
+To the extent permitted by law, we are not liable for indirect or consequential losses arising from your use of the app, including lost recordings.
+
+## Changes
+
+We may update these terms when the app changes. The current version is always available in the app.
+
+## Contact
+
+[Contact email to be set before release]

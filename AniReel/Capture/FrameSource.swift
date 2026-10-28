@@ -11,6 +11,10 @@ protocol FrameSource: AnyObject, Sendable {
     func apply(_ configuration: CameraConfiguration) async throws
     /// Returns whether microphone audio is now flowing to `onAudio`.
     func setAudioCapture(_ enabled: Bool) async -> Bool
+    /// Whether the active camera has a usable torch (never for the front camera or demo frames).
+    func isTorchAvailable() async -> Bool
+    /// Returns the torch state actually applied.
+    func setTorch(_ on: Bool) async -> Bool
     func stop()
 }
 

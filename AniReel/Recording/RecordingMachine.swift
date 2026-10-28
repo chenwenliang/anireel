@@ -45,6 +45,9 @@ enum RecordingEffect: Equatable {
     case beginWriting
     case finishWriting
     case save(URL)
+    /// The only signal that a clip reached Photos; guest allowance counting and the local
+    /// library key off it. Performed before the temp file is deleted.
+    case clipSaved(URL)
     case deleteFile(URL)
 }
 
@@ -67,7 +70,7 @@ enum RecordingMachine {
                 ? (.saving(url), [.save(url)])
                 : (.tooShort, [.deleteFile(url)])
         case (.saving(let url), .saveSucceeded):
-            return (.saved, [.deleteFile(url)])
+            return (.saved, [.clipSaved(url), .deleteFile(url)])
         case (.saving(let url), .saveFailed):
             return (.saveFailed(url), [])
         case (.saveFailed(let url), .retryRequested):

@@ -6,7 +6,7 @@ enum CameraError: Error {
     case cannotAddOutput
 }
 
-enum CameraPosition {
+enum CameraPosition: String, Codable {
     case back
     case front
 
@@ -86,6 +86,25 @@ final class CameraSession: NSObject, FrameSource, AVCaptureVideoDataOutputSample
 
     func setAudioCapture(_ enabled: Bool) async -> Bool {
         (try? await onSessionQueue { [self] in configureAudio(enabled) }) ?? false
+    }
+
+    func isTorchAvailable() async -> Bool {
+        (try? await onSessionQueue { [self] in
+            guard let device = videoInput?.device else { return false }
+            return device.hasTorch && device.isTorchAvailable
+        }) ?? false
+    }
+
+    func setTorch(_ on: Bool) async -> Bool {
+        (try? await onSessionQueue { [self] in
+            guard let device = videoInput?.device, device.hasTorch, device.isTorchModeSupported(on ? .on : .off) else {
+                return false
+            }
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            device.torchMode = on ? .on : .off
+            return on
+        }) ?? false
     }
 
     func stop() {

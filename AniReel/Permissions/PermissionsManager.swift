@@ -56,15 +56,11 @@ struct PermissionDeniedView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: symbol)
-        } description: {
-            Text("Allow access in Settings to continue.")
-        } actions: {
+        StateMessageView(systemImage: symbol, title: title, message: "Allow access in Settings to continue.", onDark: true) {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.gradient)
         }
     }
 

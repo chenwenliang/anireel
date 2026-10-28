@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AniReel Design Board</title>
+<style>
+:root {
+  --cyan: #22C1EE; --blue: #2F6BFF; --violet: #8B5CF6; --coral: #FF6B4A;
+  --ink: #15131F; --ink2: #6B6878; --surface: #FFFFFF; --grouped: #F4F4F8; --hair: rgba(0,0,0,.08);
+  --indigo: #1E1648;
+  --aurora: linear-gradient(135deg, var(--cyan), var(--blue) 55%, var(--violet));
+  --mark: linear-gradient(135deg, var(--coral) 0%, var(--coral) 20%, var(--blue) 60%, var(--violet) 100%);
+  --board: #ECEBF2; --boardInk: #15131F; --boardInk2: #5E5B6B; --card: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --board: #0F0E16; --boardInk: #F2F1F7; --boardInk2: #A3A0B3; --card: #1A1924; }
+}
+:root[data-theme="dark"] { --board: #0F0E16; --boardInk: #F2F1F7; --boardInk2: #A3A0B3; --card: #1A1924; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--board); color: var(--boardInk);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased; line-height: 1.5;
+}
+.wrap { max-width: 1320px; margin: 0 auto; padding: 48px 16px 80px; }
+header.hero { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; margin-bottom: 40px; }
+.hero h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -.02em; line-height: 1.1; }
+.hero p { color: var(--boardInk2); max-width: 720px; margin-top: 10px; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--coral); margin-bottom: 8px; }
+.icon-xl { width: 132px; height: 132px; border-radius: 30px; overflow: hidden; box-shadow: 0 18px 40px rgba(47,107,255,.28); }
+section.band { background: var(--card); border-radius: 24px; padding: 24px; margin-bottom: 28px; }
+.band h2 { font-size: 20px; margin-bottom: 4px; }
+.band > p { color: var(--boardInk2); font-size: 14px; margin-bottom: 18px; }
+.tokens { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.swatch { border-radius: 16px; overflow: hidden; border: 1px solid rgba(127,127,127,.18); }
+.swatch i { display: block; height: 64px; }
+.swatch div { padding: 8px 10px; font-size: 12px; }
+.swatch b { display: block; font-size: 13px; }
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.principle { border-radius: 16px; padding: 16px; border: 1px solid rgba(127,127,127,.18); font-size: 14px; }
+.principle b { display: block; margin-bottom: 4px; }
+.principle span { color: var(--boardInk2); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 36px 24px; justify-items: center; }
+figure { width: 300px; max-width: 100%; }
+figcaption { margin-top: 14px; font-size: 13px; color: var(--boardInk2); }
+figcaption b { display: block; color: var(--boardInk); font-size: 15px; margin-bottom: 2px; }
+figcaption .n { color: var(--coral); font-weight: 800; margin-right: 6px; }
+
+/* Phone frame */
+.phone { position: relative; width: 300px; max-width: 100%; aspect-ratio: 300 / 650; border-radius: 46px; padding: 9px; background: #0B0A10; box-shadow: 0 24px 60px rgba(20,16,40,.28), inset 0 0 0 2px #2A2833; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: var(--surface); color: var(--ink); font-size: 12px; }
+.island { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 86px; height: 25px; border-radius: 20px; background: #000; z-index: 20; }
+.status { position: absolute; top: 0; left: 0; right: 0; height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px 0 30px; font-size: 12px; font-weight: 700; z-index: 15; }
+.status.dark { color: #fff; }
+.status .bars { display: flex; gap: 4px; align-items: center; }
+.status .batt { width: 22px; height: 11px; border-radius: 3px; border: 1.5px solid currentColor; position: relative; }
+.status .batt::after { content: ""; position: absolute; inset: 1.5px; right: 5px; background: currentColor; border-radius: 1px; }
+.home-ind { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 104px; height: 4px; border-radius: 3px; background: rgba(0,0,0,.85); z-index: 30; }
+.home-ind.light { background: rgba(255,255,255,.9); }
+.scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scrim-b { position: absolute; left: 0; right: 0; bottom: 0; height: 55%; background: linear-gradient(transparent, rgba(0,0,0,.72)); }
+.scrim-t { position: absolute; left: 0; right: 0; top: 0; height: 22%; background: linear-gradient(rgba(0,0,0,.45), transparent); }
+svg.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Shared UI atoms */
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 99px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.pill.glass { background: rgba(255,255,255,.18); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.22); }
+.pill.coral { background: var(--coral); color: #fff; }
+.pill.soft { background: var(--grouped); color: var(--ink); }
+.pill svg.ic { width: 12px; height: 12px; stroke-width: 2.4; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border-radius: 99px; font-weight: 700; font-size: 13px; }
+.btn.grad { background: var(--mark); color: #fff; box-shadow: 0 8px 18px rgba(47,107,255,.28); }
+.btn.line { background: #fff; color: var(--ink); border: 1px solid var(--hair); }
+.btn.glass { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.2); }
+.btn svg.ic { width: 15px; height: 15px; }
+.wordmark { display: flex; align-items: center; gap: 5px; font-weight: 900; font-size: 15px; letter-spacing: -.01em; }
+.wordmark svg { width: 20px; height: 20px; }
+
+/* Tab bar: one floating capsule with the camera docked in its middle */
+.tabbar { position: absolute; left: 12px; right: 12px; bottom: 20px; height: 56px; border-radius: 28px; display: grid; grid-template-columns: 1fr 1fr 74px 1fr 1fr; align-items: center; z-index: 12; }
+.tabbar.dark { background: rgba(18,16,28,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.5); }
+.tabbar.light { background: rgba(255,255,255,.92); border: 1px solid var(--hair); box-shadow: 0 10px 26px rgba(20,16,40,.10); color: rgba(21,19,31,.42); }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 9.5px; font-weight: 700; }
+.tab svg.ic { width: 19px; height: 19px; }
+.tabbar.dark .tab.on { color: #fff; }
+.tabbar.light .tab.on { color: var(--ink); }
+.tab.on::after { content: ""; width: 4px; height: 4px; border-radius: 2px; background: var(--coral); margin-top: 1px; }
+.shoot { justify-self: center; width: 60px; height: 60px; margin-top: -26px; border-radius: 50%; background: var(--mark); border: 3px solid #fff; display: grid; place-items: center; color: #fff; box-shadow: 0 10px 22px rgba(47,107,255,.45); }
+.shoot svg.ic { width: 24px; height: 24px; stroke-width: 2.2; }
+
+/* Feed */
+.topbar { position: absolute; top: 46px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: center; color: #fff; z-index: 10; }
+.reel { position: absolute; right: 5px; top: 120px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
+.reel i { width: 3px; height: 22px; border-radius: 2px; background: rgba(255,255,255,.35); }
+.reel i.on { background: #fff; height: 36px; }
+.actions { position: absolute; right: 12px; bottom: 112px; display: flex; flex-direction: column; gap: 14px; color: #fff; z-index: 10; }
+.act { display: flex; flex-direction: column; align-items: center; font-size: 9.5px; font-weight: 700; gap: 2px; }
+.act span.c { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.16); display: grid; place-items: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.act svg.ic { width: 18px; height: 18px; }
+.meta { position: absolute; left: 14px; right: 70px; bottom: 104px; color: #fff; z-index: 10; }
+.meta h3 { font-size: 17px; margin: 6px 0 2px; }
+.meta p { font-size: 11px; opacity: .78; }
+.samplecard { position: absolute; left: 12px; right: 12px; bottom: 92px; padding: 14px; border-radius: 22px; background: rgba(20,16,32,.42); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.18); color: #fff; z-index: 10; }
+.samplecard h3 { font-size: 20px; letter-spacing: -.01em; margin: 6px 0 2px; }
+.samplecard p { font-size: 11px; opacity: .8; margin-bottom: 10px; }
+.samplecard small { display: block; font-size: 9.5px; opacity: .6; margin-top: 8px; text-align: center; }
+.ribbon { position: absolute; top: 92px; left: -34px; transform: rotate(-45deg); background: var(--coral); color: #fff; font-weight: 800; font-size: 10px; letter-spacing: .1em; padding: 4px 40px; z-index: 11; box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+.dots3 { display: flex; gap: 5px; justify-content: center; margin-top: 8px; }
+.dots3 i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.4); }
+.dots3 i.on { width: 16px; background: #fff; }
+
+/* Camera */
+.cam-top { position: absolute; top: 46px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: center; color: #fff; z-index: 10; }
+.cam-top .x { position: absolute; left: 0; }
+.rail { position: absolute; right: 10px; top: 96px; display: flex; flex-direction: column; gap: 12px; color: #fff; z-index: 10; }
+.rail .act span.c { width: 34px; height: 34px; background: rgba(0,0,0,.22); }
+.rail .act.on span.c { color: var(--coral); background: rgba(255,255,255,.92); }
+.styletabs { position: absolute; left: 0; right: 0; bottom: 132px; display: flex; justify-content: center; gap: 4px; z-index: 10; }
+.styletabs span { padding: 6px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.82); text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.styletabs span.on { background: #fff; color: var(--ink); text-shadow: none; }
+.shutterrow { position: absolute; left: 0; right: 0; bottom: 36px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; z-index: 10; color: #fff; }
+.thumbbtn { justify-self: center; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; }
+.thumbbtn .t { width: 40px; height: 40px; border-radius: 11px; border: 2px solid #fff; overflow: hidden; }
+.record { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; display: grid; place-items: center; }
+.record i { width: 60px; height: 60px; border-radius: 50%; background: var(--coral); }
+.timerchip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 172px; z-index: 10; }
+
+/* Sheets */
+.dim { position: absolute; inset: 0; background: rgba(8,6,16,.55); z-index: 12; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 28px 28px 0 0; padding: 10px 18px 28px; z-index: 13; }
+.grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.14); margin: 0 auto 6px; }
+.sheet h3 { font-size: 19px; text-align: center; letter-spacing: -.01em; margin: 8px 0 4px; }
+.meter { margin: 12px 0; padding: 10px 12px; border-radius: 14px; background: var(--grouped); }
+.meter .row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.meter .bar { height: 6px; border-radius: 3px; background: var(--mark); }
+.benefit { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 0; }
+.benefit span.c { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: rgba(47,107,255,.1); color: var(--blue); }
+.benefit svg.ic { width: 15px; height: 15px; }
+
+/* Light pages */
+.page { position: absolute; inset: 0; padding: 54px 20px 0; }
+.navrow { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--ink2); height: 30px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--grouped); border-radius: 12px; padding: 3px; margin: 10px 0 16px; font-weight: 700; font-size: 12px; text-align: center; color: var(--ink2); }
+.seg span { padding: 7px 0; border-radius: 9px; }
+.seg span.on { background: #fff; color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.page h1 { font-size: 26px; letter-spacing: -.02em; line-height: 1.15; margin: 10px 0 4px; }
+.page .sub { color: var(--ink2); font-size: 12px; margin-bottom: 16px; }
+.field { background: var(--grouped); border-radius: 14px; padding: 8px 14px; margin-bottom: 9px; }
+.field label { display: block; font-size: 9.5px; font-weight: 700; color: var(--ink2); }
+.field div { font-size: 13px; min-height: 18px; }
+.field.focus { background: #fff; box-shadow: 0 0 0 2px var(--blue); }
+.hint { font-size: 10.5px; color: var(--ink2); margin: 2px 2px 12px; }
+.strength { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0 2px 4px; }
+.strength i { height: 4px; border-radius: 2px; background: var(--grouped); }
+.strength i.on { background: var(--blue); }
+.link { color: var(--blue); font-weight: 700; font-size: 12px; text-align: center; margin-top: 12px; }
+.legal { position: absolute; left: 20px; right: 20px; bottom: 26px; text-align: center; font-size: 9.5px; color: var(--ink2); }
+.legal b { color: var(--ink); }
+.steps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 12px 0 14px; }
+.steps div { font-size: 10px; font-weight: 700; color: var(--ink2); }
+.steps div i { display: block; height: 4px; border-radius: 2px; background: var(--grouped); margin-bottom: 5px; }
+.steps div.on { color: var(--ink); }
+.steps div.on i { background: var(--mark); }
+.notice { background: var(--grouped); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; font-size: 11.5px; color: var(--ink2); }
+.notice b { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 13px; margin-bottom: 4px; }
+.notice svg.ic { width: 16px; height: 16px; color: var(--blue); }
+
+/* Result */
+.result { position: absolute; inset: 0; background: #000; padding: 52px 16px 0; color: #fff; }
+.result .done { text-align: right; font-weight: 800; font-size: 13px; }
+.clipcard { position: relative; margin: 10px auto 0; width: 76%; aspect-ratio: 9 / 16; border-radius: 22px; overflow: hidden; box-shadow: 0 18px 40px rgba(139,92,246,.35); }
+.clipcard .pill { position: absolute; top: 10px; left: 10px; }
+.clipcard .play { position: absolute; bottom: 10px; left: 10px; right: 10px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); }
+.clipcard .play::after { content: ""; display: block; width: 46%; height: 100%; background: #fff; border-radius: 2px; }
+.saved { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 800; font-size: 12.5px; margin: 14px 0 12px; }
+.saved span.c { width: 18px; height: 18px; border-radius: 50%; background: #2ECC71; display: grid; place-items: center; }
+.saved svg.ic { width: 11px; height: 11px; stroke-width: 3.2; color: #fff; }
+.btnrow { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.next { margin-top: 14px; font-size: 10.5px; color: rgba(255,255,255,.6); text-align: center; }
+.next div { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+
+/* Profile */
+.profile { position: absolute; inset: 0; background: var(--grouped); padding: 50px 14px 0; }
+.profile h1 { font-size: 26px; letter-spacing: -.02em; margin: 6px 4px 10px; }
+.idcard { border-radius: 22px; padding: 14px; color: #fff; background: var(--aurora); box-shadow: 0 12px 26px rgba(47,107,255,.25); }
+.idcard .who { display: flex; gap: 10px; align-items: center; }
+.idcard .av { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-items: center; }
+.idcard .av svg { width: 26px; height: 26px; }
+.idcard b { font-size: 14px; display: block; }
+.idcard small { font-size: 10.5px; opacity: .85; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; background: rgba(255,255,255,.14); border-radius: 14px; padding: 8px 0; text-align: center; }
+.stats b { font-size: 16px; }
+.stats small { display: block; font-size: 9.5px; opacity: .8; }
+.sect { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 4px 7px; font-weight: 800; font-size: 13px; }
+.sect span { color: var(--ink2); font-size: 11px; font-weight: 600; }
+.clips3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.clips3 div { position: relative; aspect-ratio: 9 / 13; border-radius: 10px; overflow: hidden; }
+.clips3 em { position: absolute; right: 5px; bottom: 4px; color: #fff; font-style: normal; font-size: 9px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.list { background: #fff; border-radius: 16px; margin-top: 12px; overflow: hidden; }
+.list div { display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 12px; border-bottom: 1px solid var(--hair); }
+.list div:last-child { border-bottom: 0; }
+.list svg.ic { width: 16px; height: 16px; color: var(--ink2); }
+.list .chev { margin-left: auto; color: rgba(0,0,0,.25); }
+.list .danger { color: #E5484D; }
+
+/* Launch + springboard */
+.launch { position: absolute; inset: 0; background: var(--indigo); display: grid; place-items: center; }
+.launch svg { width: 96px; height: 96px; opacity: .92; }
+.springboard { position: absolute; inset: 0; background: linear-gradient(160deg, #F6E9F3, #DCE6FF 50%, #E7DDFB); padding: 66px 22px 0; }
+.apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 14px; }
+.app { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9.5px; color: var(--ink); }
+.app i { width: 100%; aspect-ratio: 1; border-radius: 22%; background: rgba(255,255,255,.55); display: block; }
+.app svg { width: 100%; aspect-ratio: 1; border-radius: 22%; display: block; box-shadow: 0 6px 14px rgba(47,107,255,.3); }
+.app.me b { font-weight: 700; }
+.dock { position: absolute; left: 12px; right: 12px; bottom: 22px; height: 76px; border-radius: 30px; background: rgba(255,255,255,.45); display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 12px 18px; }
+.dock i { border-radius: 22%; background: rgba(255,255,255,.65); }
+.variants { position: absolute; left: 22px; right: 22px; bottom: 112px; background: rgba(255,255,255,.7); border-radius: 20px; padding: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; font-size: 9px; color: var(--ink2); }
+.variants div span { display: grid; place-items: center; height: 46px; border-radius: 12px; margin-bottom: 3px; }
+.variants svg { width: 30px; height: 30px; }
+
+.foot { margin-top: 40px; font-size: 13px; color: var(--boardInk2); }
+@media (max-width: 640px) { header.hero { grid-template-columns: 1fr; } .icon-xl { width: 96px; height: 96px; border-radius: 22px; } }
+</style>
+</head>
+<body>
+
+<!-- Shared defs: the A mark (mask), gradients, illustrative scenes, icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gMark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF6B4A"/><stop offset=".2" stop-color="#FF6B4A"/>
+      <stop offset=".6" stop-color="#2F6BFF"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="gAurora" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22C1EE"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <!-- Same geometry as scripts/make_placeholder_art.py (84% scale, round apex and feet, centred play) -->
+    <mask id="mA" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect width="100" height="100" fill="#000"/>
+      <polygon points="50,27.7 78.1,73.1 21.9,73.1" fill="#fff" stroke="#fff" stroke-width="12.6" stroke-linejoin="round"/>
+      <polygon points="50,69.7 63.4,92 36.6,92" fill="#000" stroke="#000" stroke-width="4.7" stroke-linejoin="round"/>
+      <polygon points="45.7,42.9 59,50.4 45.7,58" fill="#000" stroke="#000" stroke-width="3.4" stroke-linejoin="round"/>
+    </mask>
+    <symbol id="markWhite" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff" mask="url(#mA)"/></symbol>
+    <symbol id="markGrad" viewBox="0 0 100 100"><rect width="100" height="100" fill="url(#gMark)" mask="url(#mA)"/></symbol>
+    <symbol id="markInk" viewBox="0 0 100 100"><rect width="100" height="100" fill="#15131F" mask="url(#mA)"/></symbol>
+    <symbol id="appIcon" viewBox="0 0 100 100"><rect width="100" height="100" fill="url(#gMark)"/><rect width="100" height="100" fill="#fff" mask="url(#mA)"/></symbol>
+
+    <!-- Illustrative scenes (stand-ins for clips and sample covers) -->
+    <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#78B6EC"/><stop offset=".5" stop-color="#FAD6AA"/><stop offset="1" stop-color="#F6BA8C"/></linearGradient>
+    <radialGradient id="sunG"><stop offset="0" stop-color="#FFF4D6"/><stop offset="1" stop-color="#FFF4D6" stop-opacity="0"/></radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="1.4"/></filter>
+    <symbol id="sceneGhibli" viewBox="0 0 90 160" preserveAspectRatio="xMidYMid slice">
+      <rect width="90" height="160" fill="url(#skyG)"/>
+      <circle cx="62" cy="56" r="26" fill="url(#sunG)"/>
+      <g fill="#fff" opacity=".8" filter="url(#soft)"><ellipse cx="22" cy="26" rx="18" ry="8"/><ellipse cx="40" cy="22" rx="14" ry="7"/><ellipse cx="70" cy="34" rx="16" ry="6"/><ellipse cx="30" cy="44" rx="12" ry="5"/></g>
+      <path d="M0 98 Q22 86 45 96 T90 92 V160 H0Z" fill="#80AC70"/>
+      <path d="M0 112 Q30 100 55 112 T90 108 V160 H0Z" fill="#5C9458"/>
+      <path d="M0 130 Q25 120 50 130 T90 126 V160 H0Z" fill="#467C4A"/>
+      <g fill="#A8CC84" opacity=".7" filter="url(#soft)"><ellipse cx="14" cy="118" rx="6" ry="3"/><ellipse cx="46" cy="124" rx="7" ry="3"/><ellipse cx="74" cy="116" rx="6" ry="3"/><ellipse cx="30" cy="142" rx="8" ry="3"/><ellipse cx="66" cy="146" rx="7" ry="3"/></g>
+    </symbol>
+    <linearGradient id="candyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFCDE2"/><stop offset=".5" stop-color="#FFE8C4"/><stop offset="1" stop-color="#C6E2FF"/></linearGradient>
+    <symbol id="sceneChibi" viewBox="0 0 90 160" preserveAspectRatio="xMidYMid slice">
+      <rect width="90" height="160" fill="url(#candyG)"/>
+      <g fill="#fff" opacity=".6"><circle cx="12" cy="18" r="5"/><circle cx="78" cy="28" r="7"/><circle cx="70" cy="12" r="3"/><circle cx="20" cy="70" r="4"/></g>
+      <ellipse cx="45" cy="160" rx="62" ry="46" fill="#FFA8C4" stroke="#462C52" stroke-width="2"/>
+      <circle cx="45" cy="74" r="26" fill="#FFE2A0" stroke="#462C52" stroke-width="2"/>
+      <ellipse cx="36" cy="72" rx="3" ry="3.6" fill="#462C52"/><ellipse cx="54" cy="72" rx="3" ry="3.6" fill="#462C52"/>
+      <circle cx="35" cy="71" r="1" fill="#fff"/><circle cx="53" cy="71" r="1" fill="#fff"/>
+      <ellipse cx="29" cy="80" rx="4" ry="2.4" fill="#FF8CA0" opacity=".8"/><ellipse cx="61" cy="80" rx="4" ry="2.4" fill="#FF8CA0" opacity=".8"/>
+      <path d="M41 81 Q45 85 49 81" fill="none" stroke="#462C52" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M16 32 l2.4 5 5.4.6-4 3.6 1.2 5.3-5-2.8-5 2.8 1.2-5.3-4-3.6 5.4-.6z" fill="#FFD666" stroke="#462C52" stroke-width="1.2"/>
+      <path d="M74 98 l1.8 3.6 4 .5-3 2.6 .9 3.9-3.7-2-3.7 2 .9-3.9-3-2.6 4-.5z" fill="#B69CFF" stroke="#462C52" stroke-width="1.1"/>
+    </symbol>
+    <symbol id="sceneNPR" viewBox="0 0 90 160" preserveAspectRatio="xMidYMid slice">
+      <rect width="90" height="20" fill="#404C8C"/><rect y="19" width="90" height="20" fill="#6268BA"/><rect y="38" width="90" height="20" fill="#9684D6"/><rect y="57" width="90" height="20" fill="#ECA4A0"/><rect y="76" width="90" height="84" fill="#FCCEA8"/>
+      <circle cx="64" cy="44" r="11" fill="#FFF4DE"/>
+      <path d="M0 160 V92 L18 70 L34 88 L54 64 L74 84 L90 74 V160Z" fill="#565CA4" stroke="#1C1830" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M0 160 V112 L22 96 L45 108 L65 92 L90 106 V160Z" fill="#3C4280" stroke="#1C1830" stroke-width="1.4" stroke-linejoin="round"/>
+      <g stroke="#1C1830" stroke-width="1.2">
+        <rect x="2" y="112" width="10" height="48" fill="#F4C4AA"/><rect x="12" y="112" width="6" height="48" fill="#C48C96"/>
+        <rect x="20" y="104" width="12" height="56" fill="#F4C4AA"/><rect x="32" y="104" width="6" height="56" fill="#C48C96"/>
+        <rect x="40" y="118" width="10" height="42" fill="#F4C4AA"/><rect x="50" y="118" width="6" height="42" fill="#C48C96"/>
+        <rect x="58" y="108" width="12" height="52" fill="#F4C4AA"/><rect x="70" y="108" width="6" height="52" fill="#C48C96"/>
+        <rect x="78" y="116" width="10" height="44" fill="#F4C4AA"/>
+      </g>
+      <g fill="#FFE296" stroke="#1C1830" stroke-width=".8"><rect x="4" y="118" width="4" height="3"/><rect x="23" y="110" width="4" height="3"/><rect x="23" y="118" width="4" height="3"/><rect x="43" y="124" width="4" height="3"/><rect x="61" y="114" width="4" height="3"/><rect x="61" y="122" width="4" height="3"/><rect x="81" y="122" width="4" height="3"/></g>
+    </symbol>
+
+    <!-- Icons (24 box, stroked) -->
+    <symbol id="i-play" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M10 9l5 3-5 3z"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-1 1.6-2.2-.5-1.3.4-2.8 1.9-2.8H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></symbol>
+    <symbol id="i-torch" viewBox="0 0 24 24"><path d="M8 3h8v4l-2 3v11h-4V10L8 7z"/><path d="M12 13v2"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M14 4l7 7-7 7v-4c-5 0-8 1.5-11 5 1-6 4-10 11-11z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M12 9v12M3 13h18M12 9C10 5 6 5 7 8M12 9c2-4 6-4 5-1"/></symbol>
+    <symbol id="i-infinity" viewBox="0 0 24 24"><path d="M8 8c-3 0-5 2-5 4s2 4 5 4c4 0 4-8 8-8 3 0 5 2 5 4s-2 4-5 4c-4 0-4-8-8-8z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-retake" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8L4 9"/><path d="M4 4v5h5"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="hero">
+    <svg class="icon-xl" viewBox="0 0 100 100" role="img" aria-label="AniReel app icon"><use href="#appIcon"/></svg>
+    <div>
+      <span class="tag">AniReel · Claude design draft</span>
+      <h1>Your feed is the camera roll. The camera is one tap from anywhere.</h1>
+      <p>A competing design board for the D9 restructure. Works come first, the camera button sits in the middle of every screen, and the only bold colour is reserved for the moment you shoot. Aurora cyan → blue → violet carries the brand; coral marks the action. Gender-neutral, Apple-minimal, built for 15–28.</p>
+    </div>
+  </header>
+
+  <section class="band">
+    <h2>Tokens</h2>
+    <p>One gradient for the brand (the duotone A), one for surfaces of identity (aurora), and one warm accent for doing things (coral). Everything else is ink on white.</p>
+    <div class="tokens">
+      <div class="swatch"><i style="background:var(--mark)"></i><div><b>Mark gradient</b>#FF6B4A → #2F6BFF → #8B5CF6</div></div>
+      <div class="swatch"><i style="background:var(--aurora)"></i><div><b>Aurora</b>#22C1EE → #2F6BFF → #8B5CF6</div></div>
+      <div class="swatch"><i style="background:var(--coral)"></i><div><b>Coral accent</b>#FF6B4A · record, selected, free-quota</div></div>
+      <div class="swatch"><i style="background:#15131F"></i><div><b>Ink</b>#15131F / secondary #6B6878</div></div>
+      <div class="swatch"><i style="background:#F4F4F8"></i><div><b>Grouped</b>#F4F4F8 · fields, lists</div></div>
+      <div class="swatch"><i style="background:#1E1648"></i><div><b>Launch indigo</b>#1E1648</div></div>
+    </div>
+  </section>
+
+  <section class="band">
+    <h2>Five layout decisions in this draft</h2>
+    <p>These are where it intentionally differs from a straight transcription of the brief.</p>
+    <div class="principles">
+      <div class="principle"><b>1 · Floating capsule tab bar</b><span>The bar floats over the feed as one glass capsule with the camera docked in the middle, so video runs edge to edge. It turns white on light tabs.</span></div>
+      <div class="principle"><b>2 · Vertical reel indicator</b><span>A thin segmented strip on the right edge of the feed shows where you are in your works, like Stories turned sideways.</span></div>
+      <div class="principle"><b>3 · Samples feel different from works</b><span>Sample pages use a coral corner ribbon and a glass card with a CTA. Real works use the minimal Douyin overlay. Nobody mistakes an illustration for their own clip.</span></div>
+      <div class="principle"><b>4 · Quota stays visible but quiet</b><span>A chip at the top of the feed, a meter on the registration wall, and a stat in the profile card. It's never a modal until the shutter is pressed.</span></div>
+      <div class="principle"><b>5 · Profile is works-first too</b><span>The clips grid sits right under the identity card. Settings and legal drop to a short list at the bottom.</span></div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- 1 Logo / icon -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="springboard">
+          <div class="apps">
+            <div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div>
+            <div class="app"><i></i>&nbsp;</div><div class="app me"><svg viewBox="0 0 100 100"><use href="#appIcon"/></svg><b>AniReel</b></div><div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div>
+            <div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div><div class="app"><i></i>&nbsp;</div>
+          </div>
+          <div class="variants">
+            <div><span style="background:var(--mark)"><svg viewBox="0 0 100 100"><use href="#markWhite"/></svg></span>白 A · 渐变底</div>
+            <div><span style="background:#fff;border:1px solid var(--hair)"><svg viewBox="0 0 100 100"><use href="#markGrad"/></svg></span>渐变 A · 白底</div>
+            <div><span style="background:#F4F4F8"><svg viewBox="0 0 100 100"><use href="#markInk"/></svg></span>单色 A</div>
+          </div>
+          <div class="dock"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">01</span><b>Logo / icon</b>The approved D8 icon: flat, no shadow, wide stance, round apex and feet, play triangle centred. It's tested on a pastel wallpaper where most icons blur together. There are three mark variants: on the gradient, on white, and monochrome.</figcaption>
+    </figure>
+
+    <!-- 2 Launch -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="launch"><svg viewBox="0 0 100 100"><use href="#markWhite"/></svg></div>
+        <div class="home-ind light"></div>
+      </div></div>
+      <figcaption><span class="n">02</span><b>Launch</b>Deep indigo with the white mark only. iOS's UILaunchScreen takes just one colour and one image, so there's no wordmark or tagline. The first frame after launch is the feed, so the launch screen should step aside.</figcaption>
+    </figure>
+
+    <!-- 3 Home: works -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <svg class="scene"><use href="#sceneGhibli"/></svg>
+        <div class="scrim-t"></div><div class="scrim-b"></div>
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="topbar">
+          <span class="wordmark"><svg viewBox="0 0 100 100"><use href="#markWhite"/></svg>AniReel</span>
+          <span class="pill coral"><svg class="ic"><use href="#i-gift"/></svg>免费次数已用完 · 注册</span>
+        </div>
+        <div class="reel"><i class="on"></i><i></i><i></i><i></i></div>
+        <div class="actions">
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-sound"/></svg></span>静音</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-share"/></svg></span>分享</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-grid"/></svg></span>作品</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-trash"/></svg></span>删除</div>
+        </div>
+        <div class="meta">
+          <span class="pill coral"><svg class="ic"><use href="#i-spark"/></svg>手绘治愈风</span>
+          <h3>10 月 29 日 · 傍晚</h3>
+          <p>0:12 · 轻点画面开声音</p>
+        </div>
+        <div class="tabbar dark">
+          <div class="tab on"><svg class="ic"><use href="#i-play"/></svg>作品</div>
+          <div class="tab"><svg class="ic"><use href="#i-palette"/></svg>风格</div>
+          <div class="shoot"><svg class="ic"><use href="#i-camera"/></svg></div>
+          <div class="tab"><svg class="ic"><use href="#i-spark"/></svg>示例</div>
+          <div class="tab"><svg class="ic"><use href="#i-user"/></svg>我的</div>
+        </div>
+        <div class="home-ind light"></div>
+      </div></div>
+      <figcaption><span class="n">03</span><b>Home · works</b>Your clips play full-bleed, newest first, muted until tapped. The reel strip on the right shows clip 1 of 4. The quota chip turns coral only once the free clip is used, and tapping it opens sign-up. Actions stay at thumb height above the floating bar.</figcaption>
+    </figure>
+
+    <!-- 4 Home: samples -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <svg class="scene"><use href="#sceneChibi"/></svg>
+        <div class="scrim-t"></div><div class="scrim-b"></div>
+        <div class="ribbon">示例作品</div>
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="topbar">
+          <span class="wordmark"><svg viewBox="0 0 100 100"><use href="#markWhite"/></svg>AniReel</span>
+          <span class="pill glass"><svg class="ic"><use href="#i-gift"/></svg>免费拍摄剩 1 次</span>
+        </div>
+        <div class="reel"><i></i><i class="on"></i><i></i></div>
+        <div class="samplecard">
+          <span class="pill coral"><svg class="ic"><use href="#i-spark"/></svg>示例 2 / 3</span>
+          <h3>Q 版萌系</h3>
+          <p>粗描边、糖果色与圆润色块。适合自拍、朋友合影和美食。</p>
+          <div class="btn grad"><svg class="ic"><use href="#i-camera"/></svg>用这个风格拍一条</div>
+          <small>示例为风格示意图，实际成片以实时预览为准</small>
+        </div>
+        <div class="tabbar dark">
+          <div class="tab on"><svg class="ic"><use href="#i-play"/></svg>作品</div>
+          <div class="tab"><svg class="ic"><use href="#i-palette"/></svg>风格</div>
+          <div class="shoot"><svg class="ic"><use href="#i-camera"/></svg></div>
+          <div class="tab"><svg class="ic"><use href="#i-spark"/></svg>示例</div>
+          <div class="tab"><svg class="ic"><use href="#i-user"/></svg>我的</div>
+        </div>
+        <div class="home-ind light"></div>
+      </div></div>
+      <figcaption><span class="n">04</span><b>Home · samples (empty library)</b>Exactly three pages, one per style. The corner ribbon and glass card set them apart from real works. The CTA opens the camera already in this style. A one-line note says the art is illustrative, not a recording.</figcaption>
+    </figure>
+
+    <!-- 5 Camera -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <svg class="scene"><use href="#sceneNPR"/></svg>
+        <div class="scrim-t"></div>
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="cam-top">
+          <svg class="ic x" style="width:22px;height:22px"><use href="#i-close"/></svg>
+          <span class="pill glass">2.5D 动画风 <svg class="ic"><use href="#i-down"/></svg></span>
+        </div>
+        <div class="rail">
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-flip"/></svg></span>翻转</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-torch"/></svg></span>手电筒</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-mic"/></svg></span>麦克风</div>
+          <div class="act on"><span class="c"><svg class="ic"><use href="#i-timer"/></svg></span>3 秒</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-grid"/></svg></span>网格</div>
+          <div class="act"><span class="c"><svg class="ic"><use href="#i-sliders"/></svg></span>设置</div>
+        </div>
+        <div class="styletabs"><span>手绘治愈风</span><span>Q 版萌系</span><span class="on">2.5D 动画风</span></div>
+        <div class="shutterrow">
+          <div class="thumbbtn"><div class="t"><svg class="scene" style="position:static;width:100%;height:100%"><use href="#sceneNPR"/></svg></div>风格</div>
+          <div class="record"><i></i></div>
+          <div class="thumbbtn"><div class="t"><svg class="scene" style="position:static;width:100%;height:100%"><use href="#sceneGhibli"/></svg></div>作品</div>
+        </div>
+        <div class="home-ind light"></div>
+      </div></div>
+      <figcaption><span class="n">05</span><b>Camera · Douyin layout</b>Close is top-left and the style chip top-centre. The right rail has icons with labels; active tools such as the 3-second timer invert to a white disc with a coral glyph. Style tabs sit just above the shutter. Bottom-left opens the style panel and bottom-right shows the latest clip. Everything except the shutter steps aside while recording.</figcaption>
+    </figure>
+
+    <!-- 6 Registration wall -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <svg class="scene"><use href="#sceneNPR"/></svg>
+        <div class="dim"></div>
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="width:20px"></span>
+            <svg viewBox="0 0 100 100" style="width:46px;height:46px"><use href="#markGrad"/></svg>
+            <svg class="ic" style="color:var(--ink2)"><use href="#i-close"/></svg>
+          </div>
+          <h3>注册免费账户，继续拍摄</h3>
+          <div class="meter"><div class="row"><span>免费拍摄</span><span style="color:var(--coral)">1 / 1 已用</span></div><div class="bar"></div></div>
+          <div class="benefit"><span class="c"><svg class="ic"><use href="#i-infinity"/></svg></span>注册后拍摄次数不限</div>
+          <div class="benefit"><span class="c"><svg class="ic"><use href="#i-phone"/></svg></span>账户只保存在这台 iPhone 上</div>
+          <div class="benefit"><span class="c"><svg class="ic"><use href="#i-shield"/></svg></span>不发邮件、不联网、不追踪</div>
+          <div class="btn grad" style="margin-top:12px">注册账户</div>
+          <div class="btn line" style="margin-top:8px">已有账户，登录</div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">06</span><b>Registration wall</b>A half sheet over the dimmed camera, so the user is never taken off the page. It appears on the shutter tap before any countdown starts. The meter shows why it appeared, and the three benefit lines describe the local V1 accurately. After sign-up, the blocked recording starts right away.</figcaption>
+    </figure>
+
+    <!-- 7 Register -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="page">
+          <div class="navrow"><span>取消</span><svg viewBox="0 0 100 100" style="width:26px;height:26px"><use href="#markGrad"/></svg><span style="width:24px"></span></div>
+          <div class="seg"><span class="on">注册</span><span>登录</span></div>
+          <h1>创建账户</h1>
+          <div class="sub">免费注册，账户只保存在这台 iPhone 上。</div>
+          <div class="field"><label>邮箱</label><div>you@example.com</div></div>
+          <div class="field focus"><label>密码</label><div>••••••••••</div></div>
+          <div class="strength"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          <div class="hint">至少 8 个字符，需包含字母和数字</div>
+          <div class="field"><label>确认密码</label><div style="color:var(--ink2)">再输入一次</div></div>
+          <div class="btn grad" style="margin-top:10px">注册账户</div>
+        </div>
+        <div class="legal">注册即表示同意 <b>《用户协议》</b> 和 <b>《隐私政策》</b></div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">07</span><b>Register</b>A 注册 | 登录 segmented control replaces the "already have an account?" link, so switching is a single tap. The field labels stay visible while you type. The strength bar uses the existing letter + number rule. The legal links are in the footer.</figcaption>
+    </figure>
+
+    <!-- 8 Login -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="page">
+          <div class="navrow"><span>取消</span><svg viewBox="0 0 100 100" style="width:26px;height:26px"><use href="#markGrad"/></svg><span style="width:24px"></span></div>
+          <div class="seg"><span>注册</span><span class="on">登录</span></div>
+          <h1>欢迎回来</h1>
+          <div class="sub">登录后拍摄次数不限。</div>
+          <div class="field"><label>邮箱</label><div>you@example.com</div></div>
+          <div class="field"><label>密码</label><div>••••••••</div></div>
+          <div style="text-align:right;font-size:11.5px;color:var(--ink2);margin:2px 2px 12px">忘记密码？</div>
+          <div class="btn grad">登录</div>
+          <div class="notice" style="margin-top:16px"><b><svg class="ic"><use href="#i-phone"/></svg>本机账户</b>当前版本的账户只保存在这台 iPhone 上，换手机需要重新注册。</div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">08</span><b>Login</b>Same layout, other segment. A small notice explains the on-device limit before it can surprise anyone (accounts don't move to a new phone in V1). "Forgot password?" is right-aligned under the fields, where people look for it.</figcaption>
+    </figure>
+
+    <!-- 9 Forgot password -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="page">
+          <div class="navrow"><svg class="ic" style="color:var(--ink)"><use href="#i-back"/></svg><span></span><span>取消</span></div>
+          <h1>重置密码</h1>
+          <div class="steps"><div class="on"><i></i>1 邮箱</div><div class="on"><i></i>2 本机重置</div><div><i></i>3 完成</div></div>
+          <div class="notice"><b><svg class="ic"><use href="#i-phone"/></svg>在这台 iPhone 上重置</b>当前版本的账户只保存在这台 iPhone 上，AniReel 不会发送任何邮件。你可以在这里为 you@example.com 设置新密码。</div>
+          <div class="field focus"><label>新密码</label><div>••••••••••</div></div>
+          <div class="field"><label>确认密码</label><div style="color:var(--ink2)">再输入一次</div></div>
+          <div class="hint">至少 8 个字符，需包含字母和数字</div>
+          <div class="btn grad">保存新密码</div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">09</span><b>Forgot password</b>A three-step strip (email → reset on device → done) makes the flow predictable. Step 2 says plainly that no email is sent. When a server backend arrives, the same strip reads "email → check inbox → done".</figcaption>
+    </figure>
+
+    <!-- 10 Result -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="result">
+          <div class="done">完成</div>
+          <div class="clipcard">
+            <svg class="scene"><use href="#sceneGhibli"/></svg>
+            <span class="pill glass"><svg class="ic"><use href="#i-spark"/></svg>手绘治愈风</span>
+            <div class="play"></div>
+          </div>
+          <div class="saved"><span class="c"><svg class="ic"><use href="#i-check"/></svg></span>已保存到相册 · 已加入我的作品</div>
+          <div class="btnrow">
+            <div class="btn glass"><svg class="ic"><use href="#i-retake"/></svg>重拍</div>
+            <div class="btn grad"><svg class="ic"><use href="#i-share"/></svg>分享</div>
+          </div>
+          <div class="next">下一条换个风格？<div><span class="pill glass">Q 版萌系</span><span class="pill glass">2.5D 动画风</span></div></div>
+        </div>
+        <div class="island"></div>
+        <div class="status dark"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="home-ind light"></div>
+      </div></div>
+      <figcaption><span class="n">10</span><b>Result</b>The clip loops in a rounded card that glows violet. The status line confirms both copies in one sentence. Share is the larger button and Retake the smaller. New in this draft: a "next one in another style?" row that goes back to the camera with that style selected.</figcaption>
+    </figure>
+
+    <!-- 11 Profile -->
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span class="bars"><span class="batt"></span></span></div>
+        <div class="profile">
+          <h1>我的</h1>
+          <div class="idcard">
+            <div class="who"><div class="av"><svg viewBox="0 0 100 100"><use href="#markWhite"/></svg></div><div><b>you@example.com</b><small>本机账户 · 拍摄次数不限</small></div></div>
+            <div class="stats"><div><b>6</b><small>作品</small></div><div><b>3</b><small>本周</small></div><div><b>∞</b><small>可拍次数</small></div></div>
+          </div>
+          <div class="sect">我的作品<span>全部 ›</span></div>
+          <div class="clips3">
+            <div><svg class="scene"><use href="#sceneGhibli"/></svg><em>0:12</em></div>
+            <div><svg class="scene"><use href="#sceneChibi"/></svg><em>0:08</em></div>
+            <div><svg class="scene"><use href="#sceneNPR"/></svg><em>0:30</em></div>
+          </div>
+          <div class="list">
+            <div><svg class="ic"><use href="#i-gear"/></svg>设置<svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div><svg class="ic"><use href="#i-shield"/></svg>隐私政策<svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div><svg class="ic"><use href="#i-mail"/></svg>发送反馈<svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div><svg class="ic"><use href="#i-out"/></svg>退出登录</div>
+          </div>
+        </div>
+        <div class="tabbar light">
+          <div class="tab"><svg class="ic"><use href="#i-play"/></svg>作品</div>
+          <div class="tab"><svg class="ic"><use href="#i-palette"/></svg>风格</div>
+          <div class="shoot"><svg class="ic"><use href="#i-camera"/></svg></div>
+          <div class="tab"><svg class="ic"><use href="#i-spark"/></svg>示例</div>
+          <div class="tab on"><svg class="ic"><use href="#i-user"/></svg>我的</div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <figcaption><span class="n">11</span><b>Profile / 我的</b>The aurora identity card holds three stats; for a guest the last one reads "1 free clip left". The clip grid follows directly. Settings, legal, feedback and sign-out form one short list; Delete Account sits inside Settings › Account, one step deeper.</figcaption>
+    </figure>
+
+  </div>
+
+  <p class="foot">The scene art is illustrative SVG made for this board, not footage. Copy is shown in Simplified Chinese, the primary market; every string has an English counterpart in the app. Rationale is in docs/design/CLAUDE_DESIGN_NOTES.md.</p>
+</div>
+</body>
+</html>

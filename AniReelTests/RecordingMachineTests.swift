@@ -56,7 +56,7 @@ final class RecordingMachineTests: XCTestCase {
 
         let (phase, effects) = run([.retryRequested, .saveSucceeded], from: failed)
         XCTAssertEqual(phase, .saved)
-        XCTAssertEqual(effects, [.save(clip), .deleteFile(clip)])
+        XCTAssertEqual(effects, [.save(clip), .clipSaved(clip), .deleteFile(clip)])
     }
 
     func testDiscardAfterSaveFailureDeletesFile() {

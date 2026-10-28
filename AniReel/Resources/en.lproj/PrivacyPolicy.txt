@@ -1,0 +1,39 @@
+# AniReel Privacy Policy
+
+Effective date: [to be set before release]
+
+AniReel is a camera app that turns your camera image into an animated style on your iPhone. This policy explains what the app does with information. In short: everything stays on your device, and we do not collect, sell or track anything.
+
+## What AniReel does not do
+
+- It makes no network requests. The app works fully offline.
+- It does not collect personal data, usage statistics, crash reports or advertising identifiers.
+- It does not track you across apps or websites.
+- It contains no third-party analytics, advertising or login SDKs.
+
+## Camera and microphone
+
+AniReel uses the camera to show and record the styled image, and the microphone to record sound with a clip. Both are processed only on your iPhone while you use the camera screen. The microphone is used only while a clip is recording. If you decline microphone access, clips are recorded without sound.
+
+## Your clips
+
+- Finished clips are saved to your Photos library. AniReel asks only for permission to add to Photos and never reads your other photos.
+- A copy of each clip is also kept inside the app, in My Clips, on your iPhone. You can delete clips one by one, or clear all of them in Settings. Deleting a clip in AniReel does not delete the copy in Photos.
+
+## Accounts
+
+In this version, accounts exist only on your iPhone. When you create an account, AniReel stores your email address and a salted hash of your password in the iPhone Keychain. Your password itself is never stored, and nothing is sent to us or anyone else. Your session and the number of free recordings used are also stored in the Keychain.
+
+You can sign out at any time, and you can delete your account in Settings. Deleting the account removes the account record and session from this iPhone.
+
+## Children
+
+AniReel is not directed at children and does not knowingly collect information from anyone, including children.
+
+## Changes
+
+If a future version changes how information is handled, for example by adding online accounts, this policy will be updated before that version is released, and the App Store privacy details will be updated to match.
+
+## Contact
+
+[Contact email to be set before release]

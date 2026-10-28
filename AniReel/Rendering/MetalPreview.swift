@@ -1,13 +1,16 @@
 import MetalKit
 import SwiftUI
 
-/// Draws the most recent stylized frame, aspect-filled. Frames arrive from the video queue;
-/// drawing happens on the main thread at the display's pace.
+/// Draws the most recent stylized frame, aspect-filled, or the unstyled source frame while the
+/// user peeks. Frames arrive from the video queue; drawing happens on the main thread at the
+/// display's pace. Peeking is preview-only: the recorder is fed separately.
 final class PreviewRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     private let context: MetalContext
     private let pipeline: MTLRenderPipelineState
     private let lock = NSLock()
     private var latest: CVPixelBuffer?
+    private var latestOriginal: CVPixelBuffer?
+    private var showsOriginal = false
 
     init(context: MetalContext) throws {
         self.context = context
@@ -18,12 +21,15 @@ final class PreviewRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         pipeline = try context.device.makeRenderPipelineState(descriptor: descriptor)
     }
 
-    func display(_ pixelBuffer: CVPixelBuffer) {
-        lock.withLock { latest = pixelBuffer }
+    func display(_ stylized: CVPixelBuffer, original: CVPixelBuffer) {
+        lock.withLock {
+            latest = stylized
+            latestOriginal = original
+        }
     }
 
-    func clear() {
-        lock.withLock { latest = nil }
+    func setShowsOriginal(_ value: Bool) {
+        lock.withLock { showsOriginal = value }
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -35,7 +41,7 @@ final class PreviewRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
               let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass)
         else { return }
 
-        let frame = lock.withLock { latest }
+        let frame = lock.withLock { showsOriginal ? latestOriginal : latest }
         let wrapped = frame.flatMap(context.makeTexture(from:))
         if let texture = wrapped?.texture {
             var scale = aspectFillScale(texture: texture, drawable: view.drawableSize)

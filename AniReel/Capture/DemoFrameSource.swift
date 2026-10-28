@@ -36,6 +36,10 @@ final class DemoFrameSource: FrameSource, @unchecked Sendable {
 
     func setAudioCapture(_ enabled: Bool) async -> Bool { false }
 
+    func isTorchAvailable() async -> Bool { false }
+
+    func setTorch(_ on: Bool) async -> Bool { false }
+
     func stop() {
         queue.sync {
             timer?.cancel()
