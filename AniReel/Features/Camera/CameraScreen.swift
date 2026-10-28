@@ -195,7 +195,7 @@ private struct CaptureChrome: View {
                     .font(.system(size: 120, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .shadow(radius: 8)
-                    .contentTransition(.numericText(countdown: true))
+                    .contentTransition(.numericText(countsDown: true))
                     .accessibilityLabel(Text("Recording starts in \(countdown)"))
                 Spacer()
             }
