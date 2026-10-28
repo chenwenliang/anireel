@@ -31,6 +31,9 @@ Your feed is the camera roll, and the camera is one tap away from anywhere. The 
 - Tab bar: change from the full-width bar to a floating capsule (same items and order).
 - Feed: add the reel indicator; move the sample copy into a glass card with the ribbon.
 - Auth: add the segmented switch and the forgot-password step strip.
-- Result: add the next-style chips (re-uses `ShellState.openCamera(style:)`).
+- Result: add the next-style chips (the camera is already open, so they close the result and call `CameraModel.selectStyle`).
 - Profile: add the stats row and an inline 3-column grid (re-uses `ClipThumbnail`).
 None of these change RecordingMachine, the gate, ClipLibrary, AuthService or preferences.
+
+## Status
+Chosen as the visual baseline (D10, 2026-10-29) and implemented in Phase 7.1. One deviation by decision: Delete Account stays on the 我的 tab instead of Settings › Account (see item 8 above).

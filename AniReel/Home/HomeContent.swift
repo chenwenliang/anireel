@@ -71,3 +71,54 @@ extension RecordingPhase {
     /// The live style may only change while idle: never mid-clip, nor while a result or alert is up.
     var allowsStyleChange: Bool { self == .ready }
 }
+
+extension StyleChoice {
+    /// The result screen's "next one in another style?" chips: every other style, in registry order.
+    static func alternatives(to current: StyleID, available: [StyleID]) -> [StyleID] {
+        available.filter { $0 != current }
+    }
+}
+
+/// The feed's vertical reel strip (D10): one segment per page, windowed so long libraries
+/// stay a short strip that slides with the current page.
+struct ReelIndicator: Equatable {
+    static let maxSegments = 7
+
+    /// Indices of the pages shown as segments.
+    let pages: Range<Int>
+    let current: Int
+
+    static func make(count: Int, current: Int, maxSegments: Int = ReelIndicator.maxSegments) -> ReelIndicator? {
+        guard count > 1 else { return nil }
+        let current = min(max(current, 0), count - 1)
+        let visible = min(count, maxSegments)
+        let start = min(max(current - visible / 2, 0), count - visible)
+        return ReelIndicator(pages: start..<(start + visible), current: current)
+    }
+}
+
+/// The three numbers on the profile card: clips, clips this week, recordings left.
+struct ProfileStats: Equatable {
+    enum Allowance: Equatable {
+        case unlimited
+        case remaining(Int)
+    }
+
+    let clips: Int
+    let thisWeek: Int
+    let allowance: Allowance
+
+    static func make(clips: [ClipRecord], quota: QuotaStatus, now: Date = .now, calendar: Calendar = .current) -> ProfileStats {
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)
+        let allowance: Allowance = switch quota {
+        case .signedIn: .unlimited
+        case .guestFree(let left): .remaining(left)
+        case .guestUsedUp: .remaining(0)
+        }
+        return ProfileStats(
+            clips: clips.count,
+            thisWeek: week.map { week in clips.filter { week.contains($0.createdAt) }.count } ?? 0,
+            allowance: allowance
+        )
+    }
+}

@@ -56,9 +56,7 @@
 "Confirm password" = "Confirm password";
 "New password" = "New password";
 "At least 8 characters, with a letter and a number." = "At least 8 characters, with a letter and a number.";
-"Already have an account? Log in" = "Already have an account? Log in";
 "Forgot password?" = "Forgot password?";
-"New here? Create an account" = "New here? Create an account";
 "Enter the email you registered with." = "Enter the email you registered with.";
 "Continue" = "Continue";
 "Check your email" = "Check your email";
@@ -167,3 +165,13 @@
 "Your clips play on the home screen. Until you make one, samples of each style show what's possible." = "Your clips play on the home screen. Until you make one, samples of each style show what's possible.";
 "Tap the centre button to shoot" = "Tap the centre button to shoot";
 "Pick a style above the shutter. The camera turns your scene into animation live, and what you see is what gets saved." = "Pick a style above the shutter. The camera turns your scene into animation live, and what you see is what gets saved.";
+"Sample %lld / %lld" = "Sample %lld / %lld";
+"Next one in another style?" = "Next one in another style?";
+"Sign Up" = "Sign Up";
+"Check inbox" = "Check inbox";
+"Step %lld of %lld" = "Step %lld of %lld";
+"By creating an account you agree to the" = "By creating an account you agree to the";
+"Log in for unlimited recordings." = "Log in for unlimited recordings.";
+"This week" = "This week";
+"Recordings left" = "Recordings left";
+"All %lld ›" = "All %lld ›";

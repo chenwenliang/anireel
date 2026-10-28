@@ -114,7 +114,17 @@ struct CameraScreen: View {
                 .presentationDetents([.medium])
         }
         .fullScreenCover(isPresented: isShowing(.saved)) {
-            ResultView(clip: model.savedClip, library: model.library) {
+            ResultView(
+                clip: model.savedClip,
+                library: model.library,
+                nextStyles: StyleChoice.alternatives(to: model.styleID, available: model.packs.map(\.descriptor.id))
+                    .compactMap { id in model.packs.first { $0.descriptor.id == id }?.descriptor },
+                onNextStyle: { style in
+                    // Back to a ready camera first: styles only change while idle.
+                    model.dismissResult()
+                    model.selectStyle(style)
+                }
+            ) {
                 model.dismissResult()
             } onDone: {
                 model.dismissResult()
@@ -279,7 +289,7 @@ private struct ToolRail: View {
     let onShowSettings: () -> Void
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 12) {
             RailButton(systemImage: "arrow.triangle.2.circlepath.camera", title: "Flip", spokenLabel: Text("Switch camera")) {
                 Task { await model.toggleCamera() }
             }
@@ -323,14 +333,17 @@ private struct RailButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 3) {
+                // Active tools invert to a white disc with a coral glyph, which reads on any scene (D10).
                 Image(systemName: systemImage)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(isOn ? Theme.accent : .white)
-                    .frame(width: 36, height: 30)
-                Text(title).font(.caption2.weight(.semibold))
+                    .frame(width: 36, height: 36)
+                    .background(isOn ? Color.white : Color.black.opacity(0.22), in: Circle())
+                    .animation(.easeOut(duration: 0.15), value: isOn)
+                Text(title).font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.45), radius: 3)
             }
-            .shadow(color: .black.opacity(0.45), radius: 3)
             .frame(minWidth: 52)
             .contentShape(Rectangle())
         }

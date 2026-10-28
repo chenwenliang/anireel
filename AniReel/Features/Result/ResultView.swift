@@ -1,10 +1,14 @@
 import SwiftUI
 
-/// Full-screen confirmation after a clip is saved: the clip loops, with Share / Retake / Done.
+/// Full-screen confirmation after a clip is saved: the clip loops, with Share / Retake / Done,
+/// and chips that go straight back to the camera in another style (D10).
 struct ResultView: View {
     /// The My Clips copy; `nil` when keeping a copy failed (the Photos copy exists regardless).
     let clip: ClipRecord?
     let library: ClipLibrary
+    /// Every style other than the one just used.
+    let nextStyles: [StyleDescriptor]
+    let onNextStyle: (StyleID) -> Void
     let onRetake: () -> Void
     let onDone: () -> Void
 
@@ -54,6 +58,22 @@ struct ResultView: View {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .buttonStyle(.gradient)
+                    }
+                }
+                if !nextStyles.isEmpty {
+                    VStack(spacing: 8) {
+                        Text("Next one in another style?")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                        HStack(spacing: 8) {
+                            ForEach(nextStyles, id: \.id) { style in
+                                Button { onNextStyle(style.id) } label: {
+                                    Pill(text: Text(style.title), systemImage: "camera.fill")
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(Text("Shoot in \(style.title)"))
+                            }
+                        }
                     }
                 }
             }

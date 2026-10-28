@@ -56,9 +56,7 @@
 "Confirm password" = "确认密码";
 "New password" = "新密码";
 "At least 8 characters, with a letter and a number." = "至少 8 个字符，需包含字母和数字。";
-"Already have an account? Log in" = "已有账户？去登录";
 "Forgot password?" = "忘记密码？";
-"New here? Create an account" = "还没有账户？去注册";
 "Enter the email you registered with." = "请输入注册时使用的邮箱。";
 "Continue" = "继续";
 "Check your email" = "请查收邮件";
@@ -167,3 +165,13 @@
 "Your clips play on the home screen. Until you make one, samples of each style show what's possible." = "你拍的作品会在主界面播放。还没有作品时，这里展示每种风格的示例。";
 "Tap the centre button to shoot" = "点中间按钮开拍";
 "Pick a style above the shutter. The camera turns your scene into animation live, and what you see is what gets saved." = "在快门上方选择风格，相机会把眼前的画面实时变成动画，所见即所得。";
+"Sample %lld / %lld" = "示例 %1$lld / %2$lld";
+"Next one in another style?" = "下一条换个风格？";
+"Sign Up" = "注册";
+"Check inbox" = "查收邮件";
+"Step %lld of %lld" = "第 %1$lld 步，共 %2$lld 步";
+"By creating an account you agree to the" = "注册即表示同意";
+"Log in for unlimited recordings." = "登录后拍摄次数不限。";
+"This week" = "本周";
+"Recordings left" = "可拍次数";
+"All %lld ›" = "全部 %lld ›";

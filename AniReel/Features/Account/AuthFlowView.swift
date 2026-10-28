@@ -38,23 +38,32 @@ struct AuthFlowView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(Theme.Palette.secondaryInk)
                 }
+                ToolbarItem(placement: .principal) {
+                    BrandMark(size: 26, gradient: true)
+                }
             }
         }
     }
 }
 
-/// White, minimal auth page: gradient A mark, title, honest subtitle, fields, primary button.
+/// White, minimal auth page: optional register/login switch, title, honest subtitle, fields,
+/// primary button. The gradient mark sits in the navigation bar.
 private struct AuthScaffold<Content: View>: View {
     let title: LocalizedStringKey
     var subtitle: LocalizedStringKey?
     var reason: LocalizedStringKey?
+    /// Register and login show the 注册 | 登录 switch (D10); reset password does not.
+    var segment: AuthScreen?
+    var onSwitch: (AuthScreen) -> Void = { _ in }
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                BrandMark(size: 48, gradient: true)
-                    .padding(.top, 8)
+                if let segment {
+                    AuthSegment(selected: segment, onSelect: onSwitch)
+                        .padding(.top, 4)
+                }
                 Text(title)
                     .font(Theme.Typography.display)
                     .foregroundStyle(Theme.Palette.ink)
@@ -93,6 +102,77 @@ private struct FieldBox<Field: View>: View {
     }
 }
 
+/// 注册 | 登录 segmented switch.
+private struct AuthSegment: View {
+    let selected: AuthScreen
+    let onSelect: (AuthScreen) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            option(.register, title: "Sign Up")
+            option(.login, title: "Log In")
+        }
+        .padding(3)
+        .background(Theme.Palette.groupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .animation(.snappy, value: selected)
+    }
+
+    private func option(_ screen: AuthScreen, title: LocalizedStringKey) -> some View {
+        let isSelected = screen == selected
+        return Button { onSelect(screen) } label: {
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(isSelected ? Theme.Palette.ink : Theme.Palette.secondaryInk)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Theme.Palette.surface)
+                            .shadow(color: .black.opacity(0.08), radius: 3, y: 2)
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+    }
+}
+
+/// email → reset → done; the middle step names what this backend actually does.
+private struct ResetStepStrip: View {
+    let stage: PasswordResetStage
+    let kind: PasswordResetStage.ResetKind
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            ForEach(PasswordResetStage.allCases, id: \.self) { step in
+                let reached = stage.isReached(step)
+                VStack(alignment: .leading, spacing: 5) {
+                    Capsule()
+                        .fill(reached ? AnyShapeStyle(Theme.Gradients.mark) : AnyShapeStyle(Theme.Palette.groupedBackground))
+                        .frame(height: 4)
+                    (Text(verbatim: "\(step.rawValue + 1) ") + title(for: step))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(reached ? Theme.Palette.ink : Theme.Palette.secondaryInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Step \(stage.rawValue + 1) of \(PasswordResetStage.allCases.count)"))
+    }
+
+    private func title(for step: PasswordResetStage) -> Text {
+        switch step {
+        case .email: Text("Email")
+        case .reset: kind == .inbox ? Text("Check inbox") : Text("Reset on this iPhone")
+        case .done: Text("Done")
+        }
+    }
+}
+
 private struct LinkButton: View {
     let title: LocalizedStringKey
     let action: () -> Void
@@ -122,7 +202,7 @@ private struct RegisterForm: View {
     }
 
     var body: some View {
-        AuthScaffold(title: "Create Account", subtitle: "Free, and stored only on this iPhone.", reason: reason) {
+        AuthScaffold(title: "Create Account", subtitle: "Free, and stored only on this iPhone.", reason: reason, segment: .register, onSwitch: switchTo) {
             EmailField(email: $email)
             FieldIssues(issues: hasSubmitted ? issues.filter { $0 == .emailInvalid } : [])
             FieldBox { SecureField("Password", text: $password).textContentType(.newPassword) }
@@ -133,7 +213,19 @@ private struct RegisterForm: View {
                 .foregroundStyle(Theme.Palette.secondaryInk)
             ServiceError(error: error)
             SubmitButton(title: "Create Account", isWorking: isWorking, action: submit)
-            LinkButton(title: "Already have an account? Log in") { switchTo(.login) }
+            VStack(spacing: 2) {
+                Text("By creating an account you agree to the")
+                HStack(spacing: 12) {
+                    NavigationLink("Terms of Service") { LegalDocumentView(document: .terms) }
+                    NavigationLink("Privacy Policy") { LegalDocumentView(document: .privacyPolicy) }
+                }
+                .fontWeight(.semibold)
+                .foregroundStyle(Theme.Palette.ink)
+            }
+            .font(Theme.Typography.caption)
+            .foregroundStyle(Theme.Palette.secondaryInk)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
         }
     }
 
@@ -165,7 +257,7 @@ private struct LoginForm: View {
     @State private var error: AuthError?
 
     var body: some View {
-        AuthScaffold(title: "Log In", subtitle: "Welcome back.", reason: reason) {
+        AuthScaffold(title: "Welcome back.", subtitle: "Log in for unlimited recordings.", reason: reason, segment: .login, onSwitch: switchTo) {
             EmailField(email: $email)
             FieldBox { SecureField("Password", text: $password).textContentType(.password) }
             HStack {
@@ -177,7 +269,6 @@ private struct LoginForm: View {
             ServiceError(error: error)
             SubmitButton(title: "Log In", isWorking: isWorking, action: submit)
                 .disabled(email.isEmpty || password.isEmpty)
-            LinkButton(title: "New here? Create an account") { switchTo(.register) }
         }
     }
 
@@ -213,12 +304,25 @@ private struct ForgotPasswordForm: View {
     @State private var isWorking = false
     @State private var error: AuthError?
 
+    private var stage: PasswordResetStage {
+        switch step {
+        case .enterEmail: .email
+        case .instructions: .reset
+        case .done: .done
+        }
+    }
+
+    private var route: PasswordResetRoute? {
+        if case .instructions(let route) = step { route } else { nil }
+    }
+
     private var passwordIssues: [CredentialIssue] {
         CredentialRules.passwordIssues(newPassword) + (newPassword == confirmation ? [] : [.confirmationMismatch])
     }
 
     var body: some View {
         AuthScaffold(title: "Reset Password") {
+            ResetStepStrip(stage: stage, kind: PasswordResetStage.resetKind(for: route))
             switch step {
             case .enterEmail:
                 Text("Enter the email you registered with.")

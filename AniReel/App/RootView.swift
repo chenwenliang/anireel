@@ -83,12 +83,13 @@ private struct AppShell: View {
     }
 }
 
+/// One floating glass capsule with the camera docked in its middle (D10). Content runs
+/// underneath it; dark glass over the feed, white everywhere else.
 private struct ShellTabBar: View {
     let selected: AppTab
     let onSelect: (AppTab) -> Void
     let onCamera: () -> Void
 
-    /// The feed is an immersive dark stage; every other tab is a light surface.
     private var isDark: Bool { selected == .works }
 
     var body: some View {
@@ -96,30 +97,38 @@ private struct ShellTabBar: View {
             item(.works, title: "Works", symbol: "play.rectangle.on.rectangle")
             item(.styles, title: "Styles", symbol: "paintpalette")
             CameraButton(action: onCamera)
-                .frame(maxWidth: .infinity)
+                .frame(width: 74)
             item(.samples, title: "Samples", symbol: "sparkles.rectangle.stack")
             item(.me, title: "Me", symbol: "person.crop.circle")
         }
-        .padding(.top, 6)
-        .padding(.bottom, 2)
+        .frame(height: 56)
         .background {
-            (isDark ? Color.black : Theme.Palette.surface)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(isDark ? Color.white.opacity(0.12) : Theme.Palette.hairline).frame(height: 0.5)
-                }
-                .ignoresSafeArea(edges: .bottom)
+            ZStack {
+                Capsule().fill(.ultraThinMaterial)
+                Capsule().fill(isDark ? Color(hex: 0x12101C).opacity(0.55) : Color.white.opacity(0.85))
+                Capsule().strokeBorder(isDark ? Color.white.opacity(0.12) : Theme.Palette.hairline, lineWidth: 1)
+            }
+            .environment(\.colorScheme, isDark ? .dark : .light)
+            .shadow(color: .black.opacity(isDark ? 0 : 0.10), radius: 13, y: 10)
         }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+        .animation(.easeInOut(duration: 0.2), value: isDark)
     }
 
     private func item(_ tab: AppTab, title: LocalizedStringKey, symbol: String) -> some View {
         let isSelected = tab == selected
         let base = isDark ? Color.white : Theme.Palette.ink
         return Button { onSelect(tab) } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 1) {
                 Image(systemName: isSelected ? symbol + ".fill" : symbol)
-                    .font(.system(size: 20, weight: .semibold))
-                    .frame(height: 24)
-                Text(title).font(.caption2.weight(.semibold))
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(height: 22)
+                Text(title).font(.system(size: 10, weight: .bold))
+                Circle()
+                    .fill(Theme.accent)
+                    .frame(width: 4, height: 4)
+                    .opacity(isSelected ? 1 : 0)
             }
             .foregroundStyle(isSelected ? base : base.opacity(0.45))
             .frame(maxWidth: .infinity, minHeight: 48)
@@ -143,8 +152,8 @@ private struct CameraButton: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 62, height: 62)
-            .shadow(color: Theme.Palette.blue.opacity(0.35), radius: 12, y: 6)
+            .frame(width: 60, height: 60)
+            .shadow(color: Theme.Palette.blue.opacity(0.45), radius: 11, y: 8)
             .offset(y: -14)
         }
         .buttonStyle(.plain)
