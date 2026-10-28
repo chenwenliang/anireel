@@ -1,3 +1,5 @@
+import Foundation
+
 /// Who may start a recording (docs/DECISIONS.md D6): guests get one saved clip for free,
 /// signed-in accounts are unlimited. Only successfully saved guest clips are counted.
 enum RecordingGate {
