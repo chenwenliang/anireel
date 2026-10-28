@@ -28,15 +28,16 @@ struct CameraConfiguration: Equatable {
     var isMirrored: Bool { position == .front && mirrorsFront }
 }
 
-/// Camera and mic capture delivering portrait 30 fps BGRA frames and audio sample buffers.
-/// All session work runs on `sessionQueue`. Set the callbacks before `start`.
-final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate,
+/// Camera capture delivering portrait 30 fps BGRA frames, plus mic sample buffers while audio
+/// capture is enabled. All session work runs on `sessionQueue`. Set the callbacks before `start`.
+final class CameraSession: NSObject, FrameSource, AVCaptureVideoDataOutputSampleBufferDelegate,
     AVCaptureAudioDataOutputSampleBufferDelegate, @unchecked Sendable
 {
     var onFrame: (@Sendable (CVPixelBuffer, CMTime) -> Void)?
     var onAudio: (@Sendable (CMSampleBuffer) -> Void)?
     /// Calls, Siri, another app taking the camera, runtime errors.
     var onInterrupted: (@Sendable () -> Void)?
+    let requiresCameraPermission = true
 
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "com.anireel.camera.session")
@@ -45,11 +46,13 @@ final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     private let videoOutput = AVCaptureVideoDataOutput()
     private let audioOutput = AVCaptureAudioDataOutput()
     private var videoInput: AVCaptureDeviceInput?
+    private var micInput: AVCaptureDeviceInput?
     private var isConfigured = false
     private var observers: [NSObjectProtocol] = []
 
     override init() {
         super.init()
+        session.automaticallyConfiguresApplicationAudioSession = false
         for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: nil) { [weak self] _ in
                 self?.onInterrupted?()
@@ -63,10 +66,10 @@ final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         }
     }
 
-    func start(_ configuration: CameraConfiguration, includeAudio: Bool) async throws {
+    func start(_ configuration: CameraConfiguration) async throws {
         try await onSessionQueue { [self] in
             if !isConfigured {
-                try configure(configuration, includeAudio: includeAudio)
+                try configure(configuration)
                 isConfigured = true
             }
             if !session.isRunning { session.startRunning() }
@@ -81,18 +84,21 @@ final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         }
     }
 
+    func setAudioCapture(_ enabled: Bool) async -> Bool {
+        (try? await onSessionQueue { [self] in configureAudio(enabled) }) ?? false
+    }
+
     func stop() {
         sessionQueue.async { [self] in
             if session.isRunning { session.stopRunning() }
         }
     }
 
-    private func onSessionQueue(_ work: @escaping () throws -> Void) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    private func onSessionQueue<T>(_ work: @escaping () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
             sessionQueue.async {
                 do {
-                    try work()
-                    continuation.resume()
+                    continuation.resume(returning: try work())
                 } catch {
                     continuation.resume(throwing: error)
                 }
@@ -100,7 +106,7 @@ final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         }
     }
 
-    private func configure(_ configuration: CameraConfiguration, includeAudio: Bool) throws {
+    private func configure(_ configuration: CameraConfiguration) throws {
         session.beginConfiguration()
         defer { session.commitConfiguration() }
         session.sessionPreset = .hd1280x720
@@ -112,18 +118,37 @@ final class CameraSession: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         session.addOutput(videoOutput)
 
         try applyVideo(configuration)
+    }
 
-        // Audio is best effort: a missing or busy mic means silent clips, never a blocked camera.
-        if includeAudio,
-           let mic = AVCaptureDevice.default(for: .audio),
-           let micInput = try? AVCaptureDeviceInput(device: mic),
-           session.canAddInput(micInput),
-           session.canAddOutput(audioOutput)
-        {
-            session.addInput(micInput)
+    /// Audio is best effort: a missing or busy mic means a silent clip, never a blocked recording.
+    private func configureAudio(_ enabled: Bool) -> Bool {
+        guard enabled else {
+            if let micInput {
+                session.beginConfiguration()
+                session.removeInput(micInput)
+                session.commitConfiguration()
+                self.micInput = nil
+            }
+            return false
+        }
+        if micInput != nil { return true }
+        guard let mic = AVCaptureDevice.default(for: .audio),
+              let input = try? AVCaptureDeviceInput(device: mic)
+        else { return false }
+        session.beginConfiguration()
+        defer { session.commitConfiguration() }
+        guard session.canAddInput(input) else { return false }
+        session.addInput(input)
+        if !session.outputs.contains(audioOutput) {
+            guard session.canAddOutput(audioOutput) else {
+                session.removeInput(input)
+                return false
+            }
             audioOutput.setSampleBufferDelegate(self, queue: audioQueue)
             session.addOutput(audioOutput)
         }
+        micInput = input
+        return true
     }
 
     /// Call inside begin/commitConfiguration.

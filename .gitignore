@@ -11,3 +11,12 @@ xcuserdata/
 # SwiftPM
 .build/
 .swiftpm/
+# ML model binaries: never committed, see docs/MODELS.md and scripts/convert_animegan.py
+*.mlmodel
+*.mlpackage/
+*.mlmodelc/
+*.onnx
+*.pb
+*.tflite
+.model-cache/
+__pycache__/

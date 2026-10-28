@@ -26,3 +26,16 @@
 "Switch camera" = "Switch camera";
 "Record" = "Record";
 "Stop" = "Stop";
+"Hand-Painted Anime" = "Hand-Painted Anime";
+"Soft painted light, gentle lines and warm countryside colors." = "Soft painted light, gentle lines and warm countryside colors.";
+"Chibi Pop" = "Chibi Pop";
+"Thick outlines, candy colors and rounded shapes." = "Thick outlines, candy colors and rounded shapes.";
+"This iPhone isn't supported" = "This iPhone isn't supported";
+"AniReel needs iPhone 11, iPhone SE (2nd generation) or newer to stylize video in real time." = "AniReel needs iPhone 11, iPhone SE (2nd generation) or newer to stylize video in real time.";
+"Starting camera" = "Starting camera";
+"Live preview in %@ style" = "Live preview in %@ style";
+"Another app may be using the camera. Close it and try again." = "Another app may be using the camera. Close it and try again.";
+"Try Again" = "Try Again";
+"Recording, %@ recorded, %@ left" = "Recording, %1$@ recorded, %2$@ left";
+"Demo frames" = "Demo frames";
+"Demo frames. No camera on this device, showing a generated scene." = "Demo frames. No camera on this device, showing a generated scene.";

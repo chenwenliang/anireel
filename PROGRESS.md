@@ -51,3 +51,37 @@
 - 保存失败保留临时文件 + 重试/丢弃的流程与 `RecordingMachine` 不变；现有测试不涉及相册，无需修改。
 - 音频会话打断音乐：按 D5 留到 Phase 4 必改（预览时混音，录制开始才切录制会话）。
 - 未编译、未运行。下一步：Phase 3（未开始）。
+
+## 2026-10-28 Phase 3 完成（ML 风格，待云端编译验证）
+- 共享 ML 运行时：`ML/CoreMLStyleRenderer.swift`。相机帧 → Metal 重采样到推理尺寸 → Core ML（`computeUnits = .all`，输出写入自有 IOSurface 缓冲区）→ 风格的 finish pass 输出 720×1280。在视频队列上同步推理，迟到帧由采集端丢弃；任何 ML 失败（加载/推理）改用该风格的 Metal 回退。模型在首帧及每次降档后按需加载。
+- 降档：`ML/InferenceGovernor.swift`（纯逻辑）。阶梯 512 → 384 → 256；起始 = `DeviceTier.current`（A13 384，A14+ 512；低于底线按 A13 处理，Phase 4 再拦截）与已打包模型的交集；每 30 帧窗口内过半帧超 1/30 秒或热状态 serious/critical 时降一档，**只降不升**。推理帧为与 S×S 同像素量的竖屏尺寸（512 → 384×680，384 → 288×512，256 → 192×344）。
+- 风格包：
+  - `Styles/Packs/ghibli`：槽位 `animegan_hayao_<S>`，finish 为纯重采样；缺模型时 `ghibliApprox`（柔化 + 平滑色阶 + 暖色提亮 + 柔和描边）。
+  - `Styles/Packs/chibi`：槽位 `animegan_chibi_<S>`，finish 为 `chibiPost`（高饱和 + 粗描边 + 双环模糊得到圆润色块）；缺模型时同一 `chibiPost` 直接作用于相机帧。
+  - Registry 顺序：手绘治愈风、Q 版萌系、2.5D 动画风。中英文案为描述性名称（"Hand-Painted Anime" / 手绘治愈风，"Chibi Pop" / Q 版萌系），不含吉卜力或宫崎骏相关名称，并有单元测试守住这一点。
+- 重构：NPR 原有的专用渲染类并入通用 `Rendering/KernelRenderer.swift`（一个 compute kernel + 参数），三种风格与重采样共用；像素缓冲池创建合并为 `MetalContext.makePixelBufferPool`；`PixelBufferTexture` 现在同时持有像素缓冲，防止 GPU 读取期间缓冲被池复用。
+- 模型管理：`scripts/convert_animegan.py`（下载官方 `.pb` 并校验 sha256，按三档尺寸转换为 fp16 `.mlmodel`，在 macOS 上做推理冒烟测试）；`docs/MODELS.md`（来源、许可、转换步骤、替代方案）；`.gitignore` 排除所有模型格式与 `.model-cache/`；`project.yml` 设置 `COREML_CODEGEN_LANGUAGE: None`。
+- 测试：`InferenceGovernorTests`（档位映射、取已打包的最大尺寸、持续慢帧逐窗降档、偶发慢帧不降、过热降档、不低于最小档、不回升、推理帧尺寸）；`StyleRegistryTests` 新增三风格顺序和商标措辞检查。
+- 决策记录（Sunny 可推翻）：
+  - **转换走官方 `.pb`，不走 ONNX。** 任务写的是 ONNX → coremltools，但 coremltools 自 6.0 起没有 ONNX 前端，且该 ONNX 图依赖 opset 9 的 `Upsample` 与运行时尺寸。上游 `deploy/pb_to_coreml.py` 已验证 `.pb` 路径，脚本沿用它。同一发布版本、同一模型。
+  - **每档一个固定形状模型，不用可变形状。** 固定形状更可能跑在 ANE 上，Linux 上也无法验证可变形状转换；代价是每个风格最多 3 个约 2 MB 的文件。
+  - **推理帧用竖屏比例而非 512×512 正方形**，避免画面压扁后再拉伸导致笔触变形；像素量与 S×S 相同，性能预算不变。
+- **许可风险（阻断上架带模型的版本）：** AnimeGANv3 仅限非商业用途，商用需作者书面授权（详见 `docs/MODELS.md`）。Chibi 画风没有公开模型。当前 App 不带模型时三种风格都可用（两个 ML 风格走 Metal 回退）。需要 Sunny/用户决定：联系作者取得授权、自训可商用模型，还是 V1 只用 Metal 回退。
+- 本机尝试：`.onnx`/`.pb` 下载成功并解析出图签名；PyPI 被出站代理拦截，未能安装 coremltools，**未实际转换出模型**。
+- 未编译、未运行（Linux 无 Xcode）。首次在设备上运行时需要重点确认：Core ML 图像输出写入 `outputBackings` 的 BGRA 缓冲正常；A13 上 384 档帧率；降档切换模型时的卡顿时长。
+- 下一步：Phase 4 上线打磨（未开始）。
+
+## 2026-10-28 Phase 4 完成（上线打磨，待云端编译验证）
+- 图标与启动屏：`scripts/make_placeholder_art.py`（Pillow）生成原创占位图到 `AniReel/Resources/Assets.xcassets`：`AppIcon`（1024×1024，无透明通道，渐变底 + 胶片框 + 星光 + 笔触弧线）、`LaunchMark`（1x/2x/3x）、`LaunchBackground` 颜色。`UILaunchScreen` 使用二者；`ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon`。
+- 隐私清单：`AniReel/Resources/PrivacyInfo.xcprivacy`，不追踪、无追踪域名、不收集数据。扫描代码后确认唯一用到的「需声明理由」API 是系统启动时间类（`CACurrentMediaTime`、采集主机时钟），声明理由 35F9.1。未使用 UserDefaults、文件时间戳、磁盘空间、键盘相关 API。
+- 不支持机型：`RootView` 接收 `DeviceTier.current`；为 `nil`（A12 及更早）时只显示「此 iPhone 不受支持」页面，中英文案。
+- 演示帧源（D4）：新增 `FrameSource` 协议，`CameraSession`（真机默认）与 `DemoFrameSource`（模拟器或无相机设备）两个实现，由纯函数 `FrameSourceKind.select` 选择。演示源用 CoreGraphics 以 30 fps 生成 720×1280 画面（后摄：动态风景，房子在左侧便于看出镜像；前摄：会眨眼的笑脸），送入同一条 StyleEngine → 预览 + ClipRecorder → 相册保存流程。不申请相机权限、不录声音，界面显示「演示画面」标记，并隐藏静音按钮。
+- 音频会话（D5）：`AudioSessionPolicy`。关闭采集会话的自动音频配置；预览时 `.ambient` + `mixWithOthers` 且会话不激活，**用户音乐不被打断**，麦克风也不接入。只有在带声音录制开始时才切到 `.playAndRecord` / `.videoRecording` 并把麦克风接入采集会话；离开录制状态时先移除麦克风，再以 `notifyOthersOnDeactivation` 停用会话，让音乐恢复。静音或无麦克风权限时整个录制都不碰音频会话。
+  - 随之修正：麦克风接入改为异步，若在麦克风就绪前就按了停止，这段视为空片段，走「过短，请重拍」而不是「录制失败」。
+- 空状态与错误态：相机不可用页增加原因说明与「重试」；启动中、实时预览、计时（已录/剩余）有无障碍标签；风格卡片合并为单个无障碍元素；保存成功时发送 VoiceOver 播报。
+- 文档：`docs/APPSTORE.md`（中英商店文案草稿、元数据、提交清单，商标规则；字段长度已核对：名称/副标题 ≤30，关键词 ≤100 字节）；`README.md` 重写（风格、约束、目录、构建、演示模式、模型）。
+- 测试：`FrameSourceAndAudioPolicyTests`（模拟器/无相机用演示源、真机用相机；演示源不要相机权限、不提供麦克风；预览音频策略可混音且不能录音、录制策略可录音）。不支持机型的判定已由既有 `DeviceTierTests` 覆盖。
+- 未做（按指示）：Codemagic 发布工作流、签名、TestFlight。
+- 待定事项：隐私政策 URL 与技术支持 URL 为上架必填，尚未建立；正式图标替换占位图；商店截图须用真机拍摄。
+- 未编译、未运行（Linux 无 Xcode）。首次云端构建后应在模拟器上手动走一遍演示模式全流程。音频会话行为（不打断音乐、录完恢复）只能在真机上验证。
+- 下一步：等待 Sunny 复核；所有阶段（1–4）已完成。

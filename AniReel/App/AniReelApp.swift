@@ -4,7 +4,7 @@ import SwiftUI
 struct AniReelApp: App {
     var body: some Scene {
         WindowGroup {
-            RootView(registry: .shipping)
+            RootView(registry: .shipping, deviceTier: DeviceTier.current)
                 .preferredColorScheme(.dark)
         }
     }

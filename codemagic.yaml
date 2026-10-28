@@ -25,6 +25,12 @@ workflows:
       - name: Install XcodeGen
         script: |
           brew install xcodegen
+      - name: Install Metal Toolchain (Xcode 26 component, required to compile .metal files)
+        script: xcodebuild -downloadComponent MetalToolchain
+      - name: Generate placeholder art (icon/launch PNGs are generated, not stored in the repo snapshot)
+        script: |
+          python3 -m pip install --user pillow
+          python3 scripts/make_placeholder_art.py
       - name: Generate Xcode project from project.yml
         script: |
           xcodegen generate

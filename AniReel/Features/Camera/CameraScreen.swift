@@ -17,13 +17,25 @@ struct CameraScreen: View {
             switch model.phase {
             case .starting:
                 ProgressView().tint(.white)
+                    .accessibilityLabel(Text("Starting camera"))
             case .permissionDenied:
                 PermissionDeniedView(kind: .camera)
             case .running(let preview, let context):
-                MetalPreview(renderer: preview, device: context.device).ignoresSafeArea()
+                MetalPreview(renderer: preview, device: context.device)
+                    .ignoresSafeArea()
+                    .accessibilityElement()
+                    .accessibilityLabel(Text("Live preview in \(pack.descriptor.title) style"))
+                    .accessibilityAddTraits(.isImage)
                 RecordingControls(model: model)
             case .failed:
-                ContentUnavailableView("Camera unavailable", systemImage: "camera.badge.ellipsis")
+                ContentUnavailableView {
+                    Label("Camera unavailable", systemImage: "camera.badge.ellipsis")
+                } description: {
+                    Text("Another app may be using the camera. Close it and try again.")
+                } actions: {
+                    Button("Try Again") { Task { await model.start() } }
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
         .navigationTitle(pack.descriptor.title)
@@ -78,9 +90,15 @@ private struct RecordingControls: View {
 
     var body: some View {
         VStack {
-            TimerBadge(elapsed: elapsed)
-                .opacity(isRecording ? 1 : 0)
-                .padding(.top, 8)
+            ZStack {
+                if model.isDemo {
+                    DemoBadge().frame(maxWidth: .infinity, alignment: .leading)
+                }
+                TimerBadge(elapsed: elapsed)
+                    .opacity(isRecording ? 1 : 0)
+                    .accessibilityHidden(!isRecording)
+            }
+            .padding(.top, 8)
             Spacer()
             if model.recording == .saved {
                 Label("Saved to Photos", systemImage: "checkmark.circle.fill")
@@ -91,7 +109,10 @@ private struct RecordingControls: View {
                     .padding(.bottom, 16)
             }
             HStack {
-                muteButton.frame(maxWidth: .infinity)
+                muteButton
+                    .opacity(model.isDemo ? 0 : 1)
+                    .accessibilityHidden(model.isDemo)
+                    .frame(maxWidth: .infinity)
                 RecordButton(isRecording: isRecording, progress: elapsed / DurationGuard.limit) {
                     model.send(isRecording ? .stopRequested : .startRequested)
                 }
@@ -104,6 +125,7 @@ private struct RecordingControls: View {
         .animation(.default, value: model.recording)
         .task(id: model.recording == .saved) {
             guard model.recording == .saved else { return }
+            AccessibilityNotification.Announcement(String(localized: "Saved to Photos")).post()
             try? await Task.sleep(for: .seconds(1.5))
             model.send(.acknowledged)
         }
@@ -150,6 +172,8 @@ private struct TimerBadge: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.thinMaterial, in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Recording, \(format(elapsed)) recorded, \(format(DurationGuard.limit - elapsed)) left"))
     }
 
     private func format(_ seconds: TimeInterval) -> String {
@@ -195,5 +219,17 @@ private struct CircleIconButton: View {
                 .background(.thinMaterial, in: Circle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Makes it obvious the picture is synthetic, not a broken camera.
+private struct DemoBadge: View {
+    var body: some View {
+        Label("Demo frames", systemImage: "sparkles.tv")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: Capsule())
+            .accessibilityLabel(Text("Demo frames. No camera on this device, showing a generated scene."))
     }
 }

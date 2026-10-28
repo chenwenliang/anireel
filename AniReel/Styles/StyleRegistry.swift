@@ -1,5 +1,7 @@
 struct StyleRegistry {
     static let shipping = StyleRegistry([
+        GhibliStylePack(),
+        ChibiStylePack(),
         NPRStylePack(),
     ])
 

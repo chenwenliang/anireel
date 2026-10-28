@@ -26,3 +26,16 @@
 "Switch camera" = "切换摄像头";
 "Record" = "录制";
 "Stop" = "停止";
+"Hand-Painted Anime" = "手绘治愈风";
+"Soft painted light, gentle lines and warm countryside colors." = "柔和的手绘光影、温润线条与田园暖色。";
+"Chibi Pop" = "Q 版萌系";
+"Thick outlines, candy colors and rounded shapes." = "粗描边、糖果色与圆润色块。";
+"This iPhone isn't supported" = "此 iPhone 不受支持";
+"AniReel needs iPhone 11, iPhone SE (2nd generation) or newer to stylize video in real time." = "AniReel 需要 iPhone 11、iPhone SE（第 2 代）或更新机型才能实时风格化视频。";
+"Starting camera" = "正在打开相机";
+"Live preview in %@ style" = "%@实时预览";
+"Another app may be using the camera. Close it and try again." = "可能有其他 App 正在使用相机，请关闭后重试。";
+"Try Again" = "重试";
+"Recording, %@ recorded, %@ left" = "正在录制，已录 %1$@，剩余 %2$@";
+"Demo frames" = "演示画面";
+"Demo frames. No camera on this device, showing a generated scene." = "演示画面。此设备没有相机，正在显示生成的场景。";

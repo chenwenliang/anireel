@@ -13,7 +13,7 @@ struct NPRStylePack: StylePack {
     )
 
     func makeRenderer(context: MetalContext) throws -> StyleRenderer {
-        try NPRRenderer(context: context)
+        try KernelRenderer(context: context, kernel: "nprStylize", params: NPRParams())
     }
 }
 
@@ -24,26 +24,4 @@ private struct NPRParams {
     var edgeLow: Float = 0.18
     var edgeHigh: Float = 0.45
     var paperStrength: Float = 0.08
-}
-
-private final class NPRRenderer: StyleRenderer {
-    private let pipeline: MTLComputePipelineState
-    private var params = NPRParams()
-
-    init(context: MetalContext) throws {
-        pipeline = try context.computePipeline(named: "nprStylize")
-    }
-
-    func encode(source: MTLTexture, destination: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return }
-        encoder.setComputePipelineState(pipeline)
-        encoder.setTexture(source, index: 0)
-        encoder.setTexture(destination, index: 1)
-        encoder.setBytes(&params, length: MemoryLayout<NPRParams>.stride, index: 0)
-        encoder.dispatchThreads(
-            MTLSize(width: destination.width, height: destination.height, depth: 1),
-            threadsPerThreadgroup: MTLSize(width: 16, height: 16, depth: 1)
-        )
-        encoder.endEncoding()
-    }
 }

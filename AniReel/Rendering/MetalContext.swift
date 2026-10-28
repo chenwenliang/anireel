@@ -33,6 +33,22 @@ final class MetalContext {
         return try device.makeComputePipelineState(function: function)
     }
 
+    /// IOSurface-backed BGRA buffers that Metal, Core ML and AVAssetWriter can all share without copies.
+    static func makePixelBufferPool(width: Int, height: Int) throws -> CVPixelBufferPool {
+        let attributes: [CFString: Any] = [
+            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey: width,
+            kCVPixelBufferHeightKey: height,
+            kCVPixelBufferMetalCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [CFString: Any](),
+        ]
+        var pool: CVPixelBufferPool?
+        guard CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attributes as CFDictionary, &pool) == kCVReturnSuccess,
+              let pool
+        else { throw MetalContextError.unavailable }
+        return pool
+    }
+
     /// Wraps a BGRA pixel buffer as a texture without copying.
     func makeTexture(from pixelBuffer: CVPixelBuffer) -> PixelBufferTexture? {
         var cvTexture: CVMetalTexture?
@@ -41,13 +57,14 @@ final class MetalContext {
             CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer), 0, &cvTexture
         )
         guard let cvTexture, let texture = CVMetalTextureGetTexture(cvTexture) else { return nil }
-        return PixelBufferTexture(texture: texture, backing: cvTexture)
+        return PixelBufferTexture(texture: texture, backing: cvTexture, pixelBuffer: pixelBuffer)
     }
 }
 
-/// The cache-backed texture is only valid while `backing` is alive, so hold this value
-/// until the GPU work that touches `texture` has completed.
+/// Hold this value until the GPU work that touches `texture` has completed: it keeps the
+/// cache texture valid and keeps the pixel buffer out of its pool so it is not reused mid-read.
 struct PixelBufferTexture {
     let texture: MTLTexture
     let backing: CVMetalTexture
+    let pixelBuffer: CVPixelBuffer
 }

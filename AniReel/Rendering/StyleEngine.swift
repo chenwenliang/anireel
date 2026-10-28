@@ -17,18 +17,7 @@ final class StyleEngine: @unchecked Sendable {
     init(pack: any StylePack, context: MetalContext) throws {
         self.context = context
         self.renderer = try pack.makeRenderer(context: context)
-        let attributes: [CFString: Any] = [
-            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey: OutputFormat.width,
-            kCVPixelBufferHeightKey: OutputFormat.height,
-            kCVPixelBufferMetalCompatibilityKey: true,
-            kCVPixelBufferIOSurfacePropertiesKey: [CFString: Any](),
-        ]
-        var pool: CVPixelBufferPool?
-        guard CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attributes as CFDictionary, &pool) == kCVReturnSuccess,
-              let pool
-        else { throw MetalContextError.unavailable }
-        self.pool = pool
+        pool = try MetalContext.makePixelBufferPool(width: OutputFormat.width, height: OutputFormat.height)
     }
 
     /// Drops the frame when the GPU is already two frames behind, rather than queueing latency.

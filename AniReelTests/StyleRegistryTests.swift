@@ -18,4 +18,20 @@ final class StyleRegistryTests: XCTestCase {
         let registry = StyleRegistry([NPRStylePack()])
         XCTAssertEqual(registry.packs.map(\.descriptor.id), [NPRStylePack.id])
     }
+
+    func testShippingRegistryListsThreeStylesInPickerOrder() {
+        XCTAssertEqual(
+            StyleRegistry.shipping.packs.map(\.descriptor.id),
+            [GhibliStylePack.id, ChibiStylePack.id, NPRStylePack.id]
+        )
+    }
+
+    func testStyleTitlesAvoidStudioTrademark() {
+        for pack in StyleRegistry.shipping.packs {
+            let copy = (pack.descriptor.title + " " + pack.descriptor.subtitle).lowercased()
+            XCTAssertFalse(copy.contains("ghibli"), copy)
+            XCTAssertFalse(copy.contains("吉卜力"), copy)
+            XCTAssertFalse(copy.contains("hayao"), copy)
+        }
+    }
 }

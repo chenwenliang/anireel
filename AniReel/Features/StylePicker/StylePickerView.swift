@@ -44,6 +44,7 @@ private struct StyleCard: View {
             .contentShape(RoundedRectangle(cornerRadius: 20))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
         .accessibilityHint(Text("The camera opens as soon as you pick one."))
     }
 }
