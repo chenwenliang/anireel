@@ -43,6 +43,7 @@ workflows:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
+            ENABLE_PREVIEWS=NO \
             build
       - name: Run unit tests on an available iPhone simulator
         script: |
@@ -57,4 +58,5 @@ workflows:
             -project AniReel.xcodeproj \
             -scheme "$SCHEME" \
             -destination "id=$UDID" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_PREVIEWS=NO
