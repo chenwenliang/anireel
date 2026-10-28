@@ -8,23 +8,23 @@ private func temporaryDirectory() -> URL {
     return url
 }
 
-private func record(_ name: String, at seconds: TimeInterval, bytes: Int64 = 100) -> ClipRecord {
+private func makeRecord(_ name: String, at seconds: TimeInterval, bytes: Int64 = 100) -> ClipRecord {
     ClipRecord(id: UUID(), fileName: name, createdAt: Date(timeIntervalSince1970: seconds), duration: 5, styleID: "npr", byteSize: bytes)
 }
 
 final class ClipLibraryIndexTests: XCTestCase {
     func testClipsStayNewestFirstAndSizesAddUp() {
         var index = ClipLibraryIndex()
-        index.insert(record("b", at: 200, bytes: 10))
-        index.insert(record("a", at: 100, bytes: 20))
-        index.insert(record("c", at: 300, bytes: 30))
+        index.insert(makeRecord("b", at: 200, bytes: 10))
+        index.insert(makeRecord("a", at: 100, bytes: 20))
+        index.insert(makeRecord("c", at: 300, bytes: 30))
         XCTAssertEqual(index.clips.map(\.fileName), ["c", "b", "a"])
         XCTAssertEqual(index.totalBytes, 60)
     }
 
     func testRemoveById() {
         var index = ClipLibraryIndex()
-        let clip = record("a", at: 1)
+        let clip = makeRecord("a", at: 1)
         index.insert(clip)
         XCTAssertEqual(index.remove(id: clip.id), clip)
         XCTAssertNil(index.remove(id: clip.id))
@@ -33,14 +33,14 @@ final class ClipLibraryIndexTests: XCTestCase {
 
     func testReconcileDropsRecordsWhoseFilesAreGone() {
         var index = ClipLibraryIndex()
-        index.insert(record("kept.mp4", at: 1))
-        index.insert(record("lost.mp4", at: 2))
+        index.insert(makeRecord("kept.mp4", at: 1))
+        index.insert(makeRecord("lost.mp4", at: 2))
         XCTAssertEqual(index.reconciled(existingFiles: ["kept.mp4", "library.json"]).clips.map(\.fileName), ["kept.mp4"])
     }
 
     func testIndexRoundTripsThroughJSON() throws {
         var index = ClipLibraryIndex()
-        index.insert(record("a", at: 1))
+        index.insert(makeRecord("a", at: 1))
         let decoded = try JSONDecoder().decode(ClipLibraryIndex.self, from: JSONEncoder().encode(index))
         XCTAssertEqual(decoded, index)
     }
