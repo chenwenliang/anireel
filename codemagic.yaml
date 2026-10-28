@@ -19,7 +19,8 @@ workflows:
         - push
       branch_patterns:
         - pattern: main
-          track_or_ignore: track
+          include: true
+          source: true
     scripts:
       - name: Install XcodeGen
         script: |
