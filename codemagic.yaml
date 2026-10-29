@@ -36,7 +36,7 @@ workflows:
         # sizes. On this Mac every model is compared with the official ONNX output; a mismatch fails
         # the build, so the Simulator steps below always run the real, checked models.
         script: |
-          scripts/fetch_models.sh
+          bash scripts/fetch_models.sh
           ls -l AniReel/Resources/Models
       - name: Generate Xcode project from project.yml
         script: |
