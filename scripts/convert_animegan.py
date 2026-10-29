@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Convert AnimeGANv3 generators into the fixed-size Core ML models AniReel loads.
+"""Build the fixed-size Core ML models AniReel loads from the official AnimeGANv3 Core ML release.
 
-For each ladder side S (512, 384, 256) this writes
-AniReel/Resources/Models/<name>_<S>.mlmodel: a portrait W x H model (same pixel count as S x S,
-multiples of 8) with an RGB image input and an RGB image output named "stylized".
+For each slot and ladder side S (512, 384, 256) this writes
+AniReel/Resources/Models/<slot>_<S>.mlmodel: a portrait W x H model (same pixel count as S x S,
+multiples of 8) with an RGB image input and an RGB image output.
 The app picks the largest bundled side at or below the device tier (DeviceTier, docs/DECISIONS.md D1)
 and steps down at runtime; see InferenceGovernor.swift, whose frameSize() this file mirrors.
 
-Source format: the TF frozen graph (.pb) from the official release, converted the way upstream's
-deploy/pb_to_coreml.py does. The ONNX export is not used: coremltools has no ONNX frontend since 6.0,
-and the ONNX graph relies on opset-9 Upsample with runtime-computed sizes.
+Source: the official .mlmodel files of release v1.1.0 (fixed 512x512, fp32, neuralnetwork format).
+The network is fully convolutional; the only size-dependent fields in the spec are the image
+input/output sizes, one attention reshape (H/8 x W/8) and three bilinear resize targets
+(H/4, H/2, H). Only those fields are rewritten: weights, layers and preprocessing are untouched.
 
-Setup (Python 3.10, macOS or Linux; the smoke test runs only on macOS):
-    python3.10 -m venv .venv && . .venv/bin/activate
-    pip install "coremltools==7.2" "tensorflow==2.12.*" "numpy<2" pillow   # Apple silicon: tensorflow-macos==2.12.*
+Check: the official ONNX of the same release (dynamic H/W) is the reference. On macOS every
+generated model is run through Core ML on official sample photos and compared with ONNX Runtime
+at the same size; the script fails if the CPU result differs by more than MAX_MEAN_ABS_DIFF.
+Elsewhere Core ML cannot run, so the comparison is skipped (docs/COREML_RESULTS.md records the
+Linux check made with a NumPy executor of the spec).
 
-Usage:
-    python scripts/convert_animegan.py                         # download + convert animegan_hayao
-    python scripts/convert_animegan.py --pb my.pb --name animegan_chibi
-
-Model binaries are gitignored. Read docs/MODELS.md for the license before shipping any model.
+Run it through scripts/fetch_models.sh, which creates the pinned, isolated environment.
+Model binaries are gitignored. Read docs/MODELS.md for the license before using any model.
 """
 
 import argparse
@@ -33,12 +33,31 @@ MODELS_DIR = REPO / "AniReel" / "Resources" / "Models"
 CACHE_DIR = REPO / ".model-cache"
 
 LADDER = (512, 384, 256)
-INPUT_TENSOR = "AnimeGANv3_input"
-OUTPUT_IMAGE = "stylized"
+SOURCE_SIDE = 512
+MAX_MEAN_ABS_DIFF = 1.0  # 0-255 pixel units, Core ML CPU vs ONNX Runtime
 
 RELEASE = "https://github.com/TachibanaYoshino/AnimeGANv3/releases/download/v1.1.0/"
-KNOWN_SOURCES = {
-    "animegan_hayao": ("AnimeGANv3_Hayao_36.pb", "58bc25bfeec1375047fb8f1d672a1ba6a7a93c266a3769a86c248374f986cf13"),
+SAMPLES = "https://raw.githubusercontent.com/TachibanaYoshino/AnimeGANv3/master/inputs/imgs/"
+
+# slot -> (official .mlmodel, sha256, official .onnx, sha256); hashes checked 2026-10-29.
+SOURCES = {
+    "animegan_hayao": (
+        "AnimeGANv3_Hayao_36.mlmodel", "8012cd99b42cc261fd49f491c6c260a1ebdd9502c4694b19a608bc3401cc77b5",
+        "AnimeGANv3_Hayao_36.onnx", "95ba7b219073fd5b12f569bc38056ffd3019cf4caf15b1feb9f73d1286c9f69d",
+    ),
+    "animegan_shinkai": (
+        "AnimeGANv3_Shinkai_37.mlmodel", "7ce2c3aed36c045e5eb6f04336900106edce490355301b15666aa99d54b30d8d",
+        "AnimeGANv3_Shinkai_37.onnx", "8dc4d789c44db472447806583c56809e155280225b991bd79f9e2cb20793dcb9",
+    ),
+}
+SAMPLE_PHOTOS = {
+    "v3_20.jpg": "ab78c175874747322b0f8fc92ab352f7b42d739264b91efe21d056fa6e61191c",
+    "v3_7.jpg": "6edb2d527f8f0b21dc04f265405ab231713a5e0f60b74ed66c8bc876833a0647",
+}
+# Every layer kind in the official specs. Anything else could carry a size and must be reviewed.
+KNOWN_LAYERS = {
+    "add", "transpose", "pooling", "unary", "activation", "convolution", "padding", "divideBroadcastable",
+    "multiply", "squeeze", "resizeBilinear", "reshapeStatic", "expandDims", "softmaxND", "reduceSum", "permute",
 }
 
 
@@ -48,88 +67,101 @@ def frame_size(side):
     return round_to_8(side * 0.75), round_to_8(side * 4 / 3)
 
 
-def fetch(name):
-    filename, sha256 = KNOWN_SOURCES[name]
+def fetch(url, filename, sha256):
     path = CACHE_DIR / filename
     if not path.exists():
         CACHE_DIR.mkdir(exist_ok=True)
-        print(f"downloading {RELEASE + filename}")
-        urllib.request.urlretrieve(RELEASE + filename, path)
+        print(f"downloading {url}")
+        urllib.request.urlretrieve(url, path)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     if digest != sha256:
-        sys.exit(f"{path}: sha256 {digest} does not match pinned {sha256}")
+        path.unlink()
+        sys.exit(f"{filename}: sha256 {digest} does not match pinned {sha256}")
     return path
 
 
-def convert(pb, side, out_path):
-    import coremltools as ct
-    from coremltools.models.neural_network import NeuralNetworkBuilder, quantization_utils
-    from coremltools.proto import FeatureTypes_pb2 as ft
+def reshape(spec, width, height):
+    """Rewrites the size-dependent fields of a 512x512 official spec for width x height."""
+    for feature in (spec.description.input[0], spec.description.output[0]):
+        feature.type.imageType.width = width
+        feature.type.imageType.height = height
+    reshapes = resizes = 0
+    for layer in spec.neuralNetwork.layers:
+        kind = layer.WhichOneof("layer")
+        if kind not in KNOWN_LAYERS:
+            sys.exit(f"unexpected layer {layer.name} ({kind}); review it for fixed sizes")
+        if kind == "resizeBilinear":
+            target = layer.resizeBilinear.targetSize
+            scale = target[0] / SOURCE_SIDE
+            if target[0] != target[1] or scale not in (0.25, 0.5, 1.0):
+                sys.exit(f"unexpected resize target {list(target)} in {layer.name}")
+            target[:] = [int(height * scale), int(width * scale)]
+            resizes += 1
+        elif kind == "reshapeStatic" and list(layer.reshapeStatic.targetShape)[1:3] == [SOURCE_SIDE // 8] * 2:
+            layer.reshapeStatic.targetShape[1:3] = [height // 8, width // 8]
+            reshapes += 1
+    if (reshapes, resizes) != (1, 3):
+        sys.exit(f"expected 1 attention reshape and 3 resizes, found {reshapes} and {resizes}")
 
+
+def build(slot, side):
+    import coremltools as ct
+
+    mlmodel_name, mlmodel_sha, _, _ = SOURCES[slot]
+    source = fetch(RELEASE + mlmodel_name, mlmodel_name, mlmodel_sha)
     width, height = frame_size(side)
-    converted = ct.convert(
-        str(pb),
-        source="tensorflow",
-        convert_to="neuralnetwork",
-        inputs=[ct.ImageType(name=INPUT_TENSOR, shape=(1, height, width, 3), channel_first=False,
-                             scale=2.0 / 255.0, bias=[-1.0, -1.0, -1.0])],
-    )
-    spec = converted.get_spec()
-    raw_output = spec.description.output[0].name
-
-    # Generator emits NHWC in [-1, 1]; Core ML image outputs need CHW in [0, 255].
-    builder = NeuralNetworkBuilder(spec=spec)
-    builder.add_permute(name="to_chw", dim=[0, 3, 1, 2], input_name=raw_output, output_name="chw")
-    builder.add_squeeze(name="drop_batch", input_name="chw", output_name="chw_image", squeeze_all=True)
-    builder.add_activation(name="to_pixels", non_linearity="LINEAR", input_name="chw_image",
-                           output_name=OUTPUT_IMAGE, params=[127.5, 127.5])
-    del spec.description.output[:]
-    output = spec.description.output.add()
-    output.name = OUTPUT_IMAGE
-    output.type.imageType.colorSpace = ft.ImageFeatureType.ColorSpace.Value("RGB")
-    output.type.imageType.width = width
-    output.type.imageType.height = height
-
-    spec.description.metadata.author = "AnimeGANv3, Xin Chen (github.com/TachibanaYoshino/AnimeGANv3)"
-    spec.description.metadata.license = "Non-commercial use only unless authorized by the AnimeGANv3 author"
-    spec.description.metadata.shortDescription = f"AniReel style model, {width}x{height}"
-
-    half = quantization_utils.quantize_weights(ct.models.MLModel(spec, skip_model_load=True), nbits=16)
-    if isinstance(half, ct.models.MLModel):
-        half.save(str(out_path))
-    else:
-        ct.utils.save_spec(half, str(out_path))
+    spec = ct.utils.load_spec(str(source))
+    reshape(spec, width, height)
+    metadata = spec.description.metadata
+    metadata.shortDescription = f"{mlmodel_name} (AnimeGANv3 v1.1.0), input and output resized to {width}x{height}"
+    metadata.license = ("AnimeGANv3 license: free for non-commercial purposes; commercial use needs "
+                        "the author's authorization letter. github.com/TachibanaYoshino/AnimeGANv3")
+    out_path = MODELS_DIR / f"{slot}_{side}.mlmodel"
+    ct.utils.save_spec(spec, str(out_path))
     print(f"wrote {out_path.relative_to(REPO)} ({width}x{height})")
+    return out_path
 
 
-def smoke_test(path, side):
+def compare(slot, side, path):
+    """Core ML (CPU, then all units) vs ONNX Runtime on official sample photos at the model size."""
     import coremltools as ct
+    import numpy as np
+    import onnxruntime as ort
     from PIL import Image
 
+    _, _, onnx_name, onnx_sha = SOURCES[slot]
+    session = ort.InferenceSession(str(fetch(RELEASE + onnx_name, onnx_name, onnx_sha)))
     width, height = frame_size(side)
-    result = ct.models.MLModel(str(path)).predict({INPUT_TENSOR: Image.new("RGB", (width, height), (120, 160, 90))})
-    image = result[OUTPUT_IMAGE]
-    if image.size != (width, height):
-        sys.exit(f"{path}: output {image.size}, expected {(width, height)}")
-    print(f"smoke test ok: {path.name}")
+    models = {units: ct.models.MLModel(str(path), compute_units=getattr(ct.ComputeUnit, units))
+              for units in ("CPU_ONLY", "ALL")}
+    for photo, sha in SAMPLE_PHOTOS.items():
+        image = Image.open(fetch(SAMPLES + photo, photo, sha)).convert("RGB").resize((width, height), Image.BICUBIC)
+        pixels = np.asarray(image, dtype=np.float32)
+        reference = session.run(None, {"AnimeGANv3_input:0": (pixels / 127.5 - 1)[None]})[0][0] * 127.5 + 127.5
+        reference = np.clip(reference, 0, 255)
+        for units, model in models.items():
+            output = model.predict({"AnimeGANv3_input": image})["image"]
+            diff = np.abs(np.asarray(output.convert("RGB"), dtype=np.float32) - reference)
+            print(f"  {path.name} {photo} {units}: mean abs diff {diff.mean():.3f}, max {diff.max():.0f} (0-255)")
+            if units == "CPU_ONLY" and diff.mean() > MAX_MEAN_ABS_DIFF:
+                sys.exit(f"{path.name}: Core ML output differs from the official ONNX model; do not ship it")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--name", default="animegan_hayao", help="model slot name, e.g. animegan_hayao or animegan_chibi")
-    parser.add_argument("--pb", type=pathlib.Path, help="local AnimeGANv3 frozen graph; required for slots without a known source")
+    parser.add_argument("slots", nargs="*", default=list(SOURCES), help=f"slots to build, default: {' '.join(SOURCES)}")
     args = parser.parse_args()
 
-    if args.pb is None and args.name not in KNOWN_SOURCES:
-        sys.exit(f"no public source for {args.name}; pass --pb (see docs/MODELS.md)")
-    pb = args.pb or fetch(args.name)
-
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    for side in LADDER:
-        out_path = MODELS_DIR / f"{args.name}_{side}.mlmodel"
-        convert(pb, side, out_path)
-        if sys.platform == "darwin":
-            smoke_test(out_path, side)
+    for slot in args.slots:
+        if slot not in SOURCES:
+            sys.exit(f"no official source for {slot} (see docs/MODELS.md)")
+        for side in LADDER:
+            path = build(slot, side)
+            if sys.platform == "darwin":
+                compare(slot, side, path)
+    if sys.platform != "darwin":
+        print("not macOS: Core ML cannot run here, the Core ML vs ONNX comparison was skipped")
 
 
 if __name__ == "__main__":

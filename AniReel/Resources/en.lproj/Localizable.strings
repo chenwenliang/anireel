@@ -1,5 +1,5 @@
 "NPR Anime" = "NPR Anime";
-"Flat cel shading, ink outlines and paper grain." = "Flat cel shading, ink outlines and paper grain.";
+"Bright cinematic skies, clear light and detailed anime scenery." = "Bright cinematic skies, clear light and detailed anime scenery.";
 "Camera access is off" = "Camera access is off";
 "Microphone access is off" = "Microphone access is off";
 "Photo library access is off" = "Photo library access is off";
@@ -142,7 +142,7 @@
 "Shoot in %@" = "Shoot in %@";
 "Turns everyday scenes into soft, hand-painted frames. Best for landscapes, streets, pets and golden-hour light." = "Turns everyday scenes into soft, hand-painted frames. Best for landscapes, streets, pets and golden-hour light.";
 "Bold outlines and candy colors make faces and small things pop. Best for selfies, friends and snacks." = "Bold outlines and candy colors make faces and small things pop. Best for selfies, friends and snacks.";
-"Flat cel shading with ink lines, like a still from a 2.5D animation. Best for buildings, city nights and motion." = "Flat cel shading with ink lines, like a still from a 2.5D animation. Best for buildings, city nights and motion.";
+"Bright skies and clear light, like a still from an animated film. Best for skies, streets and wide views." = "Bright skies and clear light, like a still from an animated film. Best for skies, streets and wide views.";
 "A live animation style." = "A live animation style.";
 "Saved to Photos · Added to My Clips" = "Saved to Photos · Added to My Clips";
 "Close" = "Close";
@@ -175,3 +175,12 @@
 "This week" = "This week";
 "Recordings left" = "Recordings left";
 "All %lld ›" = "All %lld ›";
+"AI model loading" = "AI model loading";
+"AI model not installed" = "AI model not installed";
+"AI model failed to load" = "AI model failed to load";
+"AI model stopped with an error" = "AI model stopped with an error";
+"Not enough memory for the AI model" = "Not enough memory for the AI model";
+"This style is unavailable" = "This style is unavailable";
+"Its AI model is not installed. The grey picture is the plain camera; recording is off for this style." = "Its AI model is not installed. The grey picture is the plain camera; recording is off for this style.";
+"Its AI model stopped working. The grey picture is the plain camera; recording is off until you choose the style again." = "Its AI model stopped working. The grey picture is the plain camera; recording is off until you choose the style again.";
+"Switches the model to size %lld." = "Switches the model to size %lld.";

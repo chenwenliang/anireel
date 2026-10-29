@@ -30,10 +30,13 @@ final class CameraModel {
     private(set) var savedClip: ClipRecord?
     /// The live style; changes only while idle (`RecordingPhase.allowsStyleChange`).
     private(set) var styleID: StyleID
+    /// The live style's model; `nil` before the pipeline starts.
+    private(set) var modelStatus: StyleModelStatus?
     let isDemo: Bool
     let packs: [any StylePack]
 
     @ObservationIgnored private var engine: StyleEngine?
+    @ObservationIgnored private var liveRenderer: CoreMLStyleRenderer?
     @ObservationIgnored private var metal: MetalContext?
     /// The style a clip was started in, so a saved clip is labelled correctly.
     @ObservationIgnored private var recordingStyleID: StyleID?
@@ -77,14 +80,15 @@ final class CameraModel {
         try? AudioSessionPolicy.preview.apply()
         do {
             let context = try MetalContext()
-            let engine = try StyleEngine(pack: pack, context: context)
+            let engine = try StyleEngine(renderer: makeRenderer(for: pack, context: context), context: context)
             self.engine = engine
             metal = context
             let preview = try PreviewRenderer(context: context)
             source.onFrame = { [recorder] pixelBuffer, time in
-                engine.process(pixelBuffer) { stylized in
-                    preview.display(stylized, original: pixelBuffer)
-                    recorder.appendVideo(stylized, at: time)
+                engine.process(pixelBuffer) { frame, isStylized in
+                    preview.display(frame, original: pixelBuffer)
+                    // Only model output is ever written; placeholder frames are preview-only.
+                    if isStylized { recorder.appendVideo(frame, at: time) }
                 }
             }
             source.onAudio = { [recorder] in recorder.appendAudio($0) }
@@ -112,10 +116,49 @@ final class CameraModel {
               let next = packs.first(where: { $0.descriptor.id == id })
         else { return }
         if let engine, let metal {
-            guard let renderer = try? next.makeRenderer(context: metal) else { return }
+            guard let renderer = try? makeRenderer(for: next, context: metal) else { return }
             engine.setRenderer(renderer)
         }
         styleID = id
+    }
+
+    /// Model loading happens later on the video queue (and once per process), so this is cheap
+    /// enough for the main thread.
+    private func makeRenderer(for pack: any StylePack, context: MetalContext) throws -> StyleRenderer {
+        let renderer = try pack.makeRenderer(context: context)
+        let ml = renderer as? CoreMLStyleRenderer
+        liveRenderer = ml
+        modelStatus = ml?.initialStatus
+        ml?.onStatus = { [weak self, weak ml] status in
+            Task { @MainActor in
+                guard let self, let ml, self.liveRenderer === ml else { return }
+                self.modelStatusChanged(status)
+            }
+        }
+        return renderer
+    }
+
+    private func modelStatusChanged(_ status: StyleModelStatus) {
+        modelStatus = status
+        // Frames after a failure are not recorded; end the clip and keep what was stylized.
+        guard !status.allowsRecording else { return }
+        cancelCountdown()
+        if isRecording { send(.stopRequested) }
+    }
+
+    /// The model size the next tap on the status badge switches to; `nil` when there is no choice.
+    var nextInferenceSide: Int? {
+        guard case .running(let stats) = modelStatus, canChangeStyle, let liveRenderer,
+              liveRenderer.availableSides.count > 1
+        else { return nil }
+        return InferenceGovernor.nextSide(after: stats.side, available: Set(liveRenderer.availableSides))
+    }
+
+    /// Measures another model size (POC: 512 vs 384). Only while idle, like a style change.
+    func cycleInferenceSide() {
+        guard let side = nextInferenceSide else { return }
+        liveRenderer?.requestSide(side)
+        modelStatus = .loading
     }
 
     /// The record button: cancels a countdown, stops a running clip, or starts one if the
@@ -129,8 +172,12 @@ final class CameraModel {
             send(.stopRequested)
             return
         }
+        guard canRecordStyle else { return }
         begin(CaptureStart.plan(decision: account.recordingDecision, selfTimer: isSelfTimerOn))
     }
+
+    /// A clip can only start while the style's model is producing frames.
+    var canRecordStyle: Bool { modelStatus?.allowsRecording ?? true }
 
     /// Called after sign-up or log-in from the gate: the recording the guest asked for starts now.
     func accountProvided() {
@@ -152,7 +199,7 @@ final class CameraModel {
                     if Task.isCancelled { return }
                 }
                 countdown = nil
-                send(.startRequested)
+                if canRecordStyle { send(.startRequested) }
             }
         }
     }

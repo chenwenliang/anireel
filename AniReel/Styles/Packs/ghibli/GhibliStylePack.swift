@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Hand-painted pastoral look. Runs the AnimeGANv3 Hayao model when it is bundled
-/// (Resources/Models/animegan_hayao_<side>), otherwise a Metal approximation.
+/// Hand-painted pastoral look: the AnimeGANv3 Hayao model (Resources/Models/animegan_hayao_<side>).
+/// Without the model the style reports itself unavailable; Ghibli.metal is no longer used.
 /// User-facing copy stays descriptive: no studio, film or character names.
 struct GhibliStylePack: StylePack {
     static let id = StyleID(rawValue: "ghibli")
@@ -16,19 +16,6 @@ struct GhibliStylePack: StylePack {
     )
 
     func makeRenderer(context: MetalContext) throws -> StyleRenderer {
-        try CoreMLStyleRenderer.make(
-            context: context,
-            modelName: Self.modelName,
-            finish: KernelRenderer<Void>.resample(context: context),
-            fallback: KernelRenderer(context: context, kernel: "ghibliApprox", params: GhibliParams())
-        )
+        try CoreMLStyleRenderer(context: context, modelName: Self.modelName, finish: KernelRenderer<Void>.resample(context: context))
     }
-}
-
-/// Mirrors `GhibliParams` in Ghibli.metal; field order and types must match.
-private struct GhibliParams {
-    var spread: Float = 1.5
-    var levels: Float = 6
-    var saturation: Float = 1.15
-    var edgeStrength: Float = 0.45
 }

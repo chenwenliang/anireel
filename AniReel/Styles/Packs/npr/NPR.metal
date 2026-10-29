@@ -1,3 +1,5 @@
+// Metal approximation from before the Core ML switch. No style uses it any more
+// (docs/COREML_RESULTS.md); kept as a standalone Metal module, never as a stand-in for a model.
 #include <metal_stdlib>
 using namespace metal;
 

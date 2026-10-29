@@ -12,8 +12,8 @@ final class KernelRenderer<Params>: StyleRenderer {
         self.params = params
     }
 
-    func encode(source: MTLTexture, destination: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return }
+    func encode(source: MTLTexture, destination: MTLTexture, commandBuffer: MTLCommandBuffer) -> Bool {
+        guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return false }
         encoder.setComputePipelineState(pipeline)
         encoder.setTexture(source, index: 0)
         encoder.setTexture(destination, index: 1)
@@ -25,6 +25,7 @@ final class KernelRenderer<Params>: StyleRenderer {
             threadsPerThreadgroup: MTLSize(width: 16, height: 16, depth: 1)
         )
         encoder.endEncoding()
+        return true
     }
 }
 

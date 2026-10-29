@@ -1,5 +1,5 @@
 "NPR Anime" = "2.5D 动画风";
-"Flat cel shading, ink outlines and paper grain." = "赛璐璐色块、墨线描边与纸张质感。";
+"Bright cinematic skies, clear light and detailed anime scenery." = "通透的电影感天空、清亮光线与细致的动画场景。";
 "Camera access is off" = "相机权限未开启";
 "Microphone access is off" = "麦克风权限未开启";
 "Photo library access is off" = "相册权限未开启";
@@ -142,7 +142,7 @@
 "Shoot in %@" = "用%@拍摄";
 "Turns everyday scenes into soft, hand-painted frames. Best for landscapes, streets, pets and golden-hour light." = "把日常画面变成柔和的手绘动画帧。适合风景、街道、宠物和傍晚的暖光。";
 "Bold outlines and candy colors make faces and small things pop. Best for selfies, friends and snacks." = "粗描边加糖果色，让人脸和小物件更可爱。适合自拍、朋友合影和美食。";
-"Flat cel shading with ink lines, like a still from a 2.5D animation. Best for buildings, city nights and motion." = "平涂色块加墨线，像 2.5D 动画的定格画面。适合建筑、城市夜景和运动场景。";
+"Bright skies and clear light, like a still from an animated film. Best for skies, streets and wide views." = "通透的天空与清亮光线，像动画电影里的一帧。适合天空、街景和远景。";
 "A live animation style." = "实时动画风格。";
 "Saved to Photos · Added to My Clips" = "已保存到相册 · 已加入我的作品";
 "Close" = "关闭";
@@ -175,3 +175,12 @@
 "This week" = "本周";
 "Recordings left" = "可拍次数";
 "All %lld ›" = "全部 %lld ›";
+"AI model loading" = "AI 模型加载中";
+"AI model not installed" = "AI 模型未安装";
+"AI model failed to load" = "AI 模型加载失败";
+"AI model stopped with an error" = "AI 模型运行出错";
+"Not enough memory for the AI model" = "内存不足，AI 模型已停止";
+"This style is unavailable" = "该风格暂不可用";
+"Its AI model is not installed. The grey picture is the plain camera; recording is off for this style." = "这个风格的 AI 模型没有安装。灰色画面只是原始相机画面，此风格无法录制。";
+"Its AI model stopped working. The grey picture is the plain camera; recording is off until you choose the style again." = "这个风格的 AI 模型出错停止。灰色画面只是原始相机画面，重新选择该风格前无法录制。";
+"Switches the model to size %lld." = "把模型尺寸切换为 %lld。";

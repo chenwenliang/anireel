@@ -44,11 +44,14 @@
 2. `cd anireel`
 3. 生成 App 图标和示例封面图（仓库里不存这些成品图，都是现生成）：
    `python3 scripts/make_placeholder_art.py`
-4. 生成 Xcode 工程：
+4. 下载并转换 AI 风格模型（仓库里不存模型文件；脚本只在 `anireel/.model-cache/` 里装自己的 Python，不动系统环境，约 1–3 分钟）：
+   `scripts/fetch_models.sh`
+   结尾会逐个打印模型与官方 ONNX 的对比，`CPU_ONLY: mean abs diff` 都应小于 1；脚本报错退出就截图发 Sunny，**不要跳过这步继续**（没有模型时手绘治愈风和 2.5D 动画风会显示「AI 模型未安装」，无法录制）。
+5. 生成 Xcode 工程：
    `xcodegen generate`
-5. 打开工程：
+6. 打开工程：
    `open AniReel.xcodeproj`
-6. ✅ 完成标志：Xcode 打开了 AniReel 工程，左侧能看到 AniReel 的文件树；第 4 步终端输出没有红色报错、第 5 步输出里有 `Created project` 字样。
+7. ✅ 完成标志：Xcode 打开了 AniReel 工程，左侧能看到 AniReel 的文件树，`Resources/Models` 下有 6 个 `.mlmodel`；第 5 步输出里有 `Created project` 字样。
 
 ## 第 4 步：在 Xcode 里登录 Apple ID 并设置签名
 
@@ -79,7 +82,7 @@
 - 以后 Sunny 发布新版时，会先把代码同步到 GitHub。你更新只需在终端里：
   `cd anireel && git pull`
   然后重新生成一次并 Run：
-  `python3 scripts/make_placeholder_art.py && xcodegen generate`
+  `python3 scripts/make_placeholder_art.py && scripts/fetch_models.sh && xcodegen generate`
   再在 Xcode 里点 ▶。
 
 ---
@@ -95,5 +98,6 @@
 | Run 报错 Developer Mode required | 第 5 步第 2 条，开启开发者模式后重启手机 |
 | App 图标是灰的 / 点开闪退提示不信任 | 第 6 步第 3 条，去「VPN 与设备管理」里信任 |
 | Bundle ID 报红 | 第 4 步第 4 条，改成 `com.你的名字.anireel` |
+| 拍摄页左上角显示「AI 模型未安装」 | 第 3 步第 4 条没执行或报错了；执行 `scripts/fetch_models.sh && xcodegen generate` 后重新 Run（Q 版萌系目前本来就没有模型，显示这条是正常的） |
 
 以上都解决不了：截图发 Sunny，注明卡在第几步。

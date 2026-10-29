@@ -184,12 +184,29 @@ private struct CaptureChrome: View {
         VStack(spacing: 0) {
             topBar
             HStack(alignment: .top) {
-                if model.isDemo { DemoBadge() }
+                VStack(alignment: .leading, spacing: 8) {
+                    if model.isDemo { DemoBadge() }
+                    if let status = model.modelStatus {
+                        ModelBadge(status: status, nextSide: model.nextInferenceSide) { model.cycleInferenceSide() }
+                    }
+                }
                 Spacer()
                 if !isCapturing { ToolRail(model: model, showsGrid: $showsGrid, onShowSettings: onShowSettings) }
             }
             .padding(.top, 12)
             Spacer()
+            if case .unavailable(let reason) = model.modelStatus, !isPeeking {
+                StateMessageView(
+                    systemImage: "exclamationmark.triangle",
+                    title: "This style is unavailable",
+                    message: reason == .notBundled
+                        ? "Its AI model is not installed. The grey picture is the plain camera; recording is off for this style."
+                        : "Its AI model stopped working. The grey picture is the plain camera; recording is off until you choose the style again.",
+                    onDark: true
+                ) { EmptyView() }
+                .accessibilityIdentifier("camera.modelUnavailable")
+                Spacer()
+            }
             if let countdown = model.countdown {
                 Text(verbatim: "\(countdown)")
                     .font(.system(size: 120, weight: .bold, design: .rounded))
@@ -254,7 +271,7 @@ private struct CaptureChrome: View {
             RecordButton(isRecording: isRecording, progress: elapsed / DurationGuard.limit) {
                 model.recordButtonTapped()
             }
-            .disabled(!(isRecording || model.recording == .ready))
+            .disabled(!(isRecording || (model.recording == .ready && model.canRecordStyle)))
 
             Button(action: onOpenMyClips) {
                 VStack(spacing: 4) {
@@ -565,6 +582,48 @@ private struct RecordButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(isRecording ? LocalizedStringKey("Stop") : "Record"))
         .accessibilityIdentifier("camera.record")
+    }
+}
+
+/// The live style's model state: loading, running with real measured numbers, or why it is
+/// unavailable. While running, a tap switches the model size (512 / 384 / 256 ladder) for comparison.
+private struct ModelBadge: View {
+    let status: StyleModelStatus
+    let nextSide: Int?
+    let onCycleSide: () -> Void
+
+    var body: some View {
+        Button(action: onCycleSide) {
+            switch status {
+            case .loading:
+                Pill(text: Text("AI model loading"), systemImage: "hourglass")
+            case .running(let stats):
+                Pill(text: Text(verbatim: Self.summary(stats)), systemImage: "cpu")
+            case .unavailable(let reason):
+                Pill(text: Text(Self.title(for: reason)), systemImage: "exclamationmark.triangle.fill", tone: .accent)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(nextSide == nil)
+        .accessibilityHint(nextSide.map { Text("Switches the model to size \($0).") } ?? Text(verbatim: ""))
+        .accessibilityIdentifier("camera.modelStatus")
+    }
+
+    /// e.g. "AI 384×680 · 12.3 fps · 71/95 ms" (inference p50 / p95).
+    static func summary(_ stats: InferenceStats) -> String {
+        String(
+            format: "AI %d×%d · %.1f fps · %.0f/%.0f ms",
+            stats.width, stats.height, stats.framesPerSecond, stats.inferenceP50 * 1000, stats.inferenceP95 * 1000
+        )
+    }
+
+    static func title(for reason: StyleModelStatus.UnavailableReason) -> LocalizedStringKey {
+        switch reason {
+        case .notBundled: "AI model not installed"
+        case .loadFailed: "AI model failed to load"
+        case .inferenceFailed: "AI model stopped with an error"
+        case .outOfResources: "Not enough memory for the AI model"
+        }
     }
 }
 

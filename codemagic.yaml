@@ -31,6 +31,13 @@ workflows:
         script: |
           python3 -m pip install --user pillow
           python3 scripts/make_placeholder_art.py
+      - name: Fetch, convert and check the Core ML style models (docs/MODELS.md)
+        # Official AnimeGANv3 Core ML models (non-commercial license), resized to the app's portrait
+        # sizes. On this Mac every model is compared with the official ONNX output; a mismatch fails
+        # the build, so the Simulator steps below always run the real, checked models.
+        script: |
+          scripts/fetch_models.sh
+          ls -l AniReel/Resources/Models
       - name: Generate Xcode project from project.yml
         script: |
           xcodegen generate

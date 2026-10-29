@@ -16,9 +16,9 @@ final class StyleEngine: @unchecked Sendable {
     private let pool: CVPixelBufferPool
     private let inFlight = DispatchSemaphore(value: 2)
 
-    init(pack: any StylePack, context: MetalContext) throws {
+    init(renderer: StyleRenderer, context: MetalContext) throws {
         self.context = context
-        self.renderer = try pack.makeRenderer(context: context)
+        self.renderer = renderer
         pool = try MetalContext.makePixelBufferPool(width: OutputFormat.width, height: OutputFormat.height)
     }
 
@@ -29,7 +29,8 @@ final class StyleEngine: @unchecked Sendable {
     }
 
     /// Drops the frame when the GPU is already two frames behind, rather than queueing latency.
-    func process(_ source: CVPixelBuffer, completion: @escaping @Sendable (CVPixelBuffer) -> Void) {
+    /// `completion` gets the output frame and whether it is stylized (see `StyleRenderer.encode`).
+    func process(_ source: CVPixelBuffer, completion: @escaping @Sendable (CVPixelBuffer, Bool) -> Void) {
         guard inFlight.wait(timeout: .now()) == .success else { return }
         var output: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &output)
@@ -42,11 +43,11 @@ final class StyleEngine: @unchecked Sendable {
             return
         }
         let renderer = rendererLock.withLock { self.renderer }
-        renderer.encode(source: src.texture, destination: dst.texture, commandBuffer: commandBuffer)
+        let isStylized = renderer.encode(source: src.texture, destination: dst.texture, commandBuffer: commandBuffer)
         commandBuffer.addCompletedHandler { [inFlight] buffer in
             withExtendedLifetime((src, dst)) {}
             inFlight.signal()
-            if buffer.status == .completed { completion(output) }
+            if buffer.status == .completed { completion(output, isStylized) }
         }
         commandBuffer.commit()
     }

@@ -60,7 +60,7 @@ extension SampleWork {
         switch style {
         case GhibliStylePack.id: "Turns everyday scenes into soft, hand-painted frames. Best for landscapes, streets, pets and golden-hour light."
         case ChibiStylePack.id: "Bold outlines and candy colors make faces and small things pop. Best for selfies, friends and snacks."
-        case NPRStylePack.id: "Flat cel shading with ink lines, like a still from a 2.5D animation. Best for buildings, city nights and motion."
+        case NPRStylePack.id: "Bright skies and clear light, like a still from an animated film. Best for skies, streets and wide views."
         default: "A live animation style."
         }
     }

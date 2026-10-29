@@ -1,7 +1,10 @@
 import XCTest
 
 /// Walks the main flow for the CI demo recording (codemagic.yaml): onboarding → feed → camera
-/// (demo frames in the Simulator) → second style → a 4-second clip → result → Done.
+/// (demo frames in the Simulator) → third style → a 4-second clip → result → Done.
+/// Styles run Core ML models, so the record button only enables once the model produces frames;
+/// the second style (Q 版) ships no model and is skipped. With no models bundled this test fails
+/// at the first wait, which is the intended signal.
 /// Every lookup goes through accessibility identifiers, so it runs in any locale.
 final class DemoFlowUITests: XCTestCase {
     override func setUp() {
@@ -28,13 +31,15 @@ final class DemoFlowUITests: XCTestCase {
         let demoBadge = app.descendants(matching: .any).matching(identifier: "camera.demoBadge").firstMatch
         XCTAssertTrue(demoBadge.waitForExistence(timeout: 20), "Camera with demo frames never appeared")
         let record = app.buttons["camera.record"]
-        waitUntilEnabled(record, timeout: 10)
-        pause(1.5)
+        // First model load compiles for the Simulator and runs on its CPU: allow plenty of time.
+        waitUntilEnabled(record, timeout: 120)
+        pause(3)
 
-        let secondStyle = app.buttons.matching(identifier: "camera.styleTab").element(boundBy: 1)
-        XCTAssertTrue(secondStyle.waitForExistence(timeout: 10), "Second style tab missing")
-        secondStyle.tap()
-        pause(1.5)
+        let thirdStyle = app.buttons.matching(identifier: "camera.styleTab").element(boundBy: 2)
+        XCTAssertTrue(thirdStyle.waitForExistence(timeout: 10), "Third style tab missing")
+        thirdStyle.tap()
+        waitUntilEnabled(record, timeout: 120)
+        pause(3)
 
         record.tap()
         pause(4)

@@ -1,50 +1,58 @@
 # AniReel 模型来源与许可（Models）
 
-模型二进制**不进 git**（`.gitignore` 已排除 `*.mlmodel` / `*.mlpackage` / `*.mlmodelc` / `*.onnx` / `*.pb` / `*.tflite` / `.model-cache/`）。App 在有无模型时都能编译运行：缺模型时对应风格自动使用 Metal 近似效果。
+模型二进制**不进 git**（`.gitignore` 已排除 `*.mlmodel` / `*.mlpackage` / `*.mlmodelc` / `*.onnx` / `*.pb` / `*.tflite` / `.model-cache/`）。获取方式：`scripts/fetch_models.sh`（一步完成下载 → 校验 → 转换 → 放进工程；Codemagic 构建也执行同一脚本）。
+
+**2026-10-29 起不再有 Metal 回退**：某风格缺模型或模型出错时，拍摄页显示「AI 模型未安装 / 加载失败 / 运行出错」，预览为灰暗的原始画面，且该风格不能录制。三个 `.metal` 近似滤镜仍留在工程里作为独立模块，但没有任何风格使用它们。
 
 ## 槽位约定
 
-| 风格 | 槽位名 | 文件（放在 `AniReel/Resources/Models/`） | 缺模型时 |
+| 风格 | 槽位名 | 模型 | 状态 |
 | --- | --- | --- | --- |
-| 手绘治愈风（StyleID `ghibli`） | `animegan_hayao` | `animegan_hayao_512.mlmodel`、`_384`、`_256` | Metal `ghibliApprox`（柔化 + 平滑色阶 + 暖色提亮 + 柔和描边） |
-| Q 版萌系（StyleID `chibi`） | `animegan_chibi` | `animegan_chibi_512.mlmodel`、`_384`、`_256` | 直接对相机帧跑 Metal `chibiPost`（高饱和 + 粗描边 + 圆润色块） |
-| 2.5D 动画风（StyleID `npr`） | 无 | 无 | 纯 Metal，无模型 |
+| 手绘治愈风（StyleID `ghibli`） | `animegan_hayao` | AnimeGANv3 官方 `AnimeGANv3_Hayao_36` | 真模型 |
+| 2.5D 动画风（StyleID `npr`） | `animegan_shinkai` | AnimeGANv3 官方 `AnimeGANv3_Shinkai_37` | 真模型 |
+| Q 版萌系（StyleID `chibi`） | `animegan_chibi` | 无 | 未完成：没有可合法取得的通用场景模型，显示「AI 模型未安装」 |
 
-- 每个尺寸是独立的固定形状模型：S=512 → 384×680，S=384 → 288×512，S=256 → 192×344（像素量与 S×S 相同的竖屏比例，8 的倍数）。公式在 `InferenceGovernor.frameSize` 与 `scripts/convert_animegan.py` 中各一份，`InferenceGovernorTests` 锁定数值。
-- 输入：RGB 图像（App 送入 BGRA `CVPixelBuffer`，Core ML 自动转换）。输出：名为 `stylized` 的 RGB 图像，App 通过 `outputBackings` 写入自有的 IOSurface 缓冲区。App 按类型找第一个图像输入/输出，不写死名字。
-- 起始尺寸 = `DeviceTier.current`（A13 → 384，A14+ → 512），取不超过它的最大已打包尺寸；之后 `InferenceGovernor` 只降不升（30 帧窗口内过半超 1/30 秒，或热状态 serious/critical，每窗口降一档）。
-- 只打包部分尺寸也可以；只打包了比本机起始尺寸更大的模型时，该风格用 Metal 回退。
+- 文件：`AniReel/Resources/Models/<槽位>_<512|384|256>.mlmodel`。每个尺寸是独立的固定形状模型：S=512 → 384×680，S=384 → 288×512，S=256 → 192×344（像素量与 S×S 相同的竖屏比例，8 的倍数）。公式在 `InferenceGovernor.frameSize` 与 `scripts/convert_animegan.py` 中各一份，`InferenceGovernorTests` 锁定数值。
+- 输入 `AnimeGANv3_input`：RGB 图像，模型内置预处理 `x/127.5 − 1`（App 送入 BGRA `CVPixelBuffer`，Core ML 自动转换）。输出 `image`：RGB 图像，模型内置 `(y+1)·127.5`，App 通过 `outputBackings` 写入自有的 IOSurface 缓冲区。App 按类型找第一个图像输入/输出，不写死名字。
+- 起始尺寸 = `DeviceTier.current`（A13 → 384，A14+ → 512），可在拍摄页点模型状态胶囊手动切换尺寸；之后 `InferenceGovernor` 只降不升（30 帧窗口内过半慢于 1/10 秒，或热状态 serious/critical）。
+- 计算单元：默认 `.all`；真机对比可用启动参数 `-CoreMLComputeUnits cpuAndNeuralEngine|cpuAndGPU|cpuOnly`。
 
-## animegan_hayao：AnimeGANv3 Hayao_36
+## 来源：AnimeGANv3 官方发布 v1.1.0
 
-- 来源仓库：https://github.com/TachibanaYoshino/AnimeGANv3
-- 发布版本：v1.1.0 — https://github.com/TachibanaYoshino/AnimeGANv3/releases/tag/v1.1.0
-- 转换所用文件：`AnimeGANv3_Hayao_36.pb`，https://github.com/TachibanaYoshino/AnimeGANv3/releases/download/v1.1.0/AnimeGANv3_Hayao_36.pb ，sha256 `58bc25bfeec1375047fb8f1d672a1ba6a7a93c266a3769a86c248374f986cf13`（2026-10-28 下载核对，脚本内固定校验）。
-- 图结构（2026-10-28 解析同版本 ONNX 核查）：输入 `AnimeGANv3_input:0`，float NHWC `[1, H, W, 3]`，取值 [-1, 1]；输出 `generator_1/main/out_layer:0`，NHWC，取值 [-1, 1]（tanh）。H、W 须为 8 的倍数。同版本 `.pb` 中这两个张量名均存在。
-- **许可核查结果（2026-10-28）：不可直接商用。** 仓库没有标准开源许可证（GitHub API 未识别出 license），README 写明对学术与非学术主体「仅限非商业用途」免费，商用须邮件联系作者获取授权书（"Regarding the request for commercial use, please contact us via email to help you obtain the authorization letter."）。
-- 风险：AniReel 以上架 App Store 为目标，属于商业分发（即使免费下载）。**未取得作者书面授权前，不得把该模型打包进提交 App Store 的版本。** 开发与内部 TestFlight 测试同样建议先取得授权或仅限本机试验。
-- 替代方案（按推荐顺序）：
-  1. 邮件联系作者取得商用授权书，存档后在此记录授权范围与日期。
-  2. 用许可可商用的数据与代码自训同架构模型（AnimeGANv3 训练代码同样受上述条款约束，需另选 MIT/Apache 训练框架与可商用画风数据集）。
-  3. 不带模型发布：手绘治愈风使用 Metal 近似效果（已实现，App 当前默认行为）。
+- 仓库：https://github.com/TachibanaYoshino/AnimeGANv3 ；发布页：https://github.com/TachibanaYoshino/AnimeGANv3/releases/tag/v1.1.0 （「The Hayao style and Shinkai style」，说明：「For the .mlmodel, its input is an image of 512*512 size.」）
+- 使用的文件（2026-10-29 下载，sha256 固定在脚本里）：
 
-## animegan_chibi：暂无公开模型
+| 文件 | sha256 | 用途 |
+| --- | --- | --- |
+| `AnimeGANv3_Hayao_36.mlmodel` | `8012cd99b42cc261fd49f491c6c260a1ebdd9502c4694b19a608bc3401cc77b5` | 转换来源 |
+| `AnimeGANv3_Hayao_36.onnx` | `95ba7b219073fd5b12f569bc38056ffd3019cf4caf15b1feb9f73d1286c9f69d` | 数值对照 |
+| `AnimeGANv3_Shinkai_37.mlmodel` | `7ce2c3aed36c045e5eb6f04336900106edce490355301b15666aa99d54b30d8d` | 转换来源 |
+| `AnimeGANv3_Shinkai_37.onnx` | `8dc4d789c44db472447806583c56809e155280225b991bd79f9e2cb20793dcb9` | 数值对照 |
+| `inputs/imgs/v3_20.jpg`、`v3_7.jpg`（仓库自带示例照片） | `ab78c175…61191c`、`6edb2d52…0a0647` | 数值对照输入 |
 
-- AnimeGANv3 官方发布只有 Hayao、Shinkai 两种画风（v1.1.0）；README 提到的 Cute 等画风没有公开下载（2026-10-28 核查 releases 页面）。
-- 现状：槽位已就绪，未打包模型，Q 版萌系使用 Metal `chibiPost` 回退。
-- 获取途径：同 Hayao 的替代方案 1、2。拿到 AnimeGANv3 架构的 `.pb` 后执行 `python scripts/convert_animegan.py --pb <file>.pb --name animegan_chibi`；其他架构需改写脚本的输入输出处理。
+- 官方 `.mlmodel`：neuralnetwork 格式（spec v4），coremltools 6.0 由 TF 1.15 转出，权重 fp32，固定 512×512，作者字段 Asher Chan。
 
-## 转换步骤
+## 许可（2026-10-29 核查官方 README 原文）
 
-1. Python 3.10 虚拟环境：`pip install "coremltools==7.2" "tensorflow==2.12.*" "numpy<2" pillow`（Apple 芯片 Mac 用 `tensorflow-macos==2.12.*`）。
-2. `python scripts/convert_animegan.py`：下载并校验 `.pb`（缓存在 `.model-cache/`），生成三个尺寸的 `.mlmodel`（neuralnetwork 格式，权重 fp16，约 2 MB/个），写入 `AniReel/Resources/Models/`。
-3. 在 macOS 上运行时，脚本自动对每个模型做一次推理冒烟测试（检查输出尺寸）；Linux 上只能转换，不能推理。
-4. `xcodegen generate`：Xcode 编译时把 `.mlmodel` 编译成 `.mlmodelc` 放进 App 根目录（`COREML_CODEGEN_LANGUAGE: None`，不生成 Swift 类），运行时按名字加载。
-5. 云端构建（Codemagic）默认不带模型，构建和测试不依赖模型存在。
+- 仓库**没有 LICENSE 文件**（`LICENSE` / `LICENSE.md` / `LICENSE.txt` 均 404），GitHub 不识别标准许可证。唯一条款是 README 的 License 一节，原文：
+  > This repo is made freely available to academic and non-academic entities for non-commercial purposes such as academic research, teaching, scientific publications. Permission is granted to use the AnimeGANv3 given that you agree to my license terms. Regarding the request for commercial use, please contact us via email to help you obtain the authorization letter.
+- 代码、权重、训练数据：README 不区分，条款覆盖整个仓库及其发布（代码与预训练权重同一条款）。训练数据（宫崎骏 / 新海诚电影截帧）的版权限制 README 未说明，属额外风险，商用前须一并确认。
+- **本次用途依据**：「non-academic entities for non-commercial purposes」——用户在自己的 iPhone 上做非商用 POC 测试，属于非商业用途；「such as academic research…」是举例，不是穷举。模型只来自官方发布页，未使用第三方重传。
+- **限制**：任何商业分发（App Store、对外 TestFlight，包括免费下载的商业 App）都必须先取得作者授权书（作者邮箱 `asher_chan@foxmail.com`）。另需注意：本 POC 的目的是评估一款计划上架的产品，「为商业产品做的内部评估」是否仍算非商用，条款没有写明——建议尽早邮件作者确认并取得授权，结果记录在此。
+- 转换出的模型 metadata 中写有许可说明，便于追溯。
 
-为什么不用 ONNX：coremltools 自 6.0 起已移除 ONNX 前端；该 ONNX 导出使用 opset 9 的 `Upsample`，尺寸在运行时计算，经 onnx2torch 等工具中转风险高。上游 `deploy/pb_to_coreml.py` 已验证 `.pb` → Core ML 路径，本脚本沿用它，只把尺寸改成竖屏三档并加了校验。
+## Q 版萌系：暂无可用模型
 
-## 本机（Linux）尝试记录（2026-10-28）
+- AnimeGANv3 官方能公开下载的**通用场景**模型只有 Hayao、Shinkai（v1.1.0；v1.0.3 另有旧版 Hayao/Shinkai ONNX）。README 提到的 Cute（2023-10-31「Portrait to Cute」）是**人像**模型，且没有公开下载；官方 `AnimeGANv3_Portrait_Inference` 发布的只有 Ghibli-c1（人脸）、PortraitSketch（人像素描）及人脸检测/分割辅助模型，都不适合整幅取景。
+- 可选方向：(1) 向作者购买/申请 Cute 等风格的模型与授权；(2) 用可商用数据自训同架构模型；(3) 评估其他有明确许可的轻量模型（需重新做许可与转换核查）。拿到 AnimeGANv3 结构的官方 `.mlmodel` 后，把它加入 `convert_animegan.py` 的 `SOURCES` 即可生成 `animegan_chibi_*`。
 
-- `.onnx` 与 `.pb` 可从 GitHub 下载，校验通过（下载到会话临时目录，未放入仓库）。
-- PyPI 被本机出站代理拦截（`pip install` 报 ProxyError），coremltools / tensorflow 无法安装，**本机未实际转换出模型**。转换需在可访问 PyPI 的机器（Mac 或 Codemagic 前置步骤）上执行，且须先满足上面的许可条件。
+## 转换方法
+
+`scripts/fetch_models.sh` → `scripts/convert_animegan.py`：
+
+1. 隔离环境：uv 0.4.30 下载 Python 3.11 到 `.model-cache/python`，venv `.model-cache/venv`，固定 `coremltools==8.3.0`、`numpy==1.26.4`、`onnxruntime==1.19.2`、`pillow==10.4.0`。不需要 TensorFlow / PyTorch。
+2. 下载官方 `.mlmodel` 并校验 sha256。
+3. 只改与尺寸有关的字段（网络是全卷积的，逐层核查后只有这些写死了 512）：输入/输出图像宽高、外部注意力 `Reshape_1` 的 64×64（= H/8 × W/8）、三个双线性上采样的目标尺寸 128/256/512（= H/4、H/2、H）。权重、层、预处理不动。出现未知层类型或数量不符时脚本退出。
+4. macOS 上逐个模型用 Core ML（CPU_ONLY 与 ALL 各一次）推理两张官方示例照片，与官方 ONNX（ONNX Runtime，同尺寸）比较；CPU_ONLY 的平均绝对差大于 1（0–255 像素值，`MAX_MEAN_ABS_DIFF = 1.0`）即失败退出。Linux 上 Core ML 不能运行，跳过此步。
+
+为什么不用 TF `.pb` 重新转换（旧方案）：官方已经提供 Core ML 版本，按需求优先用官方模型；只改尺寸字段比重新经 TF 前端转换改动更小、不引入 TensorFlow 依赖，且结果可与官方 ONNX 逐像素对照。

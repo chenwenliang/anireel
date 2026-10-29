@@ -25,5 +25,7 @@ protocol StyleRenderer: AnyObject {
     /// `source` is the portrait camera frame; `destination` is the output frame at `OutputFormat` size.
     /// Called once per frame on the camera's video queue. ML renderers block here for inference,
     /// so GPU-only renderers should just encode and return.
-    func encode(source: MTLTexture, destination: MTLTexture, commandBuffer: MTLCommandBuffer)
+    /// Returns `false` when `destination` is not a stylized frame (a placeholder, or nothing was
+    /// encoded); such frames may be previewed but are never recorded.
+    func encode(source: MTLTexture, destination: MTLTexture, commandBuffer: MTLCommandBuffer) -> Bool
 }
