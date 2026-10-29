@@ -21,6 +21,7 @@ struct ResultView: View {
                     Button("Done", action: onDone)
                         .font(.headline)
                         .foregroundStyle(.white)
+                        .accessibilityIdentifier("result.done")
                 }
                 if let clip {
                     ClipSurface(url: library.url(for: clip), gravity: .resizeAspect)

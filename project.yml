@@ -56,12 +56,26 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.anireel.app.tests
         GENERATE_INFOPLIST_FILE: YES
+  AniReelUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AniReelUITests
+    dependencies:
+      - target: AniReel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anireel.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: AniReel
 schemes:
   AniReel:
     build:
       targets:
         AniReel: all
         AniReelTests: [test]
+        AniReelUITests: [test]
     test:
       targets:
         - AniReelTests
+        - AniReelUITests

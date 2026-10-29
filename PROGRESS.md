@@ -180,3 +180,14 @@
 - 测试：新增 `Phase71Tests.swift`（换风格候选、进度段窗口与边界、本周作品数按日历周计算与额度映射、找回密码步骤与中间步骤命名）。既有测试未改动；录制状态机、门槛、作品库、AuthService、偏好的逻辑与接口未变。
 - 未编译、未运行（Linux 无 Swift 工具链），需 Codemagic 云端构建 + 单元测试确认。
 - 提醒：`AniReel/Features/Account/AccountSheet.swift` 已在 Phase 7 本地删除；若 GitHub 快照同步同样无法删除文件，远端可能仍留着旧版（它只依赖仍存在的 `AccountSection`，能编译，但属于死代码），可按 StylePickerView 的做法放一个空文件占位。
+
+## 2026-10-29 模拟器演示视频（CI 产出 anireel-demo.mp4；待云端验证）
+- 无障碍标识（只加不改）：`onboarding.skip`、`shell.camera`（中央拍摄键）、`camera.demoBadge`（演示画面徽标，用来判断相机已就绪）、`camera.styleTab`（每个风格页签同一标识，按序号取第二个）、`camera.record`、`result.done`。
+- 新增 UI 测试目标 `AniReelUITests`（`project.yml`，`bundle.ui-testing`，已加入 scheme 的测试动作）和唯一一个测试 `DemoFlowUITests.testMainFlowDemo`：启动 → 有引导页就跳过 → 作品流上滑一次 → 中央拍摄键 → 等演示画面 → 第二个风格页签 → 录制 4 秒 → 停止 → 等结果页 → 完成 → 回到外壳。只用标识定位，不依赖语言；系统相册权限弹窗按「最后一个按钮」点允许（各语言通用）。步骤之间留 1.5–2.5 秒停顿方便看视频，预计总时长约 30 秒。
+- `codemagic.yaml`：
+  - 单元测试步骤加了 `-skip-testing:AniReelUITests`。**原因：scheme 现在包含 UI 测试，不加这一项单元测试步骤也会跑 UI 测试**；单元测试内容与结果不受影响。
+  - 新步骤「Record a demo video」：选同一台模拟器（与单元测试步骤相同的选取命令）并启动 → `build-for-testing` → 用 `simctl install` 装入构建好的 .app → 重置模拟器钥匙串（游客免费次数存在钥匙串里）并预先授予「添加到相册」权限 → 后台 `simctl io recordVideo --codec=h264` → `test-without-building -only-testing:AniReelUITests` → SIGINT 停止录制 → `ls -lh`。
+  - **决策：先 build-for-testing 再开录**，而不是直接 `xcodebuild test`，这样视频从 App 启动开始，不录编译时间；跑的仍是同一个 UI 测试。
+  - **决策：该步骤 `ignore_failure: true`**：演示失败会在该步骤显示，但不会让构建变红；测试失败时也会先停止录制，视频照样上传。
+  - 工作流新增 `artifacts`：`$CM_WORKSPACE/anireel-demo.mp4` 和 `anireel-demo.mp4`。视频写到 `${CM_WORKSPACE:-$CM_BUILD_DIR}`：未核实 Codemagic 是否提供 `CM_WORKSPACE`，没有时退回克隆目录，第二条相对路径能匹配到。
+- 未编译、未运行（Linux 无 Xcode），需 Codemagic 云端构建确认。

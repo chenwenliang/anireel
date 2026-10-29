@@ -159,6 +159,7 @@ private struct CameraButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Shoot"))
         .accessibilityHint(Text("Opens the camera."))
+        .accessibilityIdentifier("shell.camera")
     }
 }
 

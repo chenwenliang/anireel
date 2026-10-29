@@ -58,5 +58,53 @@ workflows:
             -project AniReel.xcodeproj \
             -scheme "$SCHEME" \
             -destination "id=$UDID" \
+            -skip-testing:AniReelUITests \
             CODE_SIGNING_ALLOWED=NO \
             ENABLE_PREVIEWS=NO
+      - name: Record a demo video of the main flow (UI test in the Simulator)
+        # A demo, not a gate: a failure shows on this step but does not fail the build.
+        ignore_failure: true
+        script: |
+          # The recorder must be stopped even when the test fails, so failures are handled explicitly.
+          set +e
+          # Same pick as the unit-test step, so it is the same simulator.
+          UDID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/{print $2; exit}')
+          OUT="${CM_WORKSPACE:-$CM_BUILD_DIR}/anireel-demo.mp4"
+          echo "Using simulator UDID: $UDID, recording to $OUT"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+
+          # Build first so the video starts at app launch, not during compilation.
+          xcodebuild build-for-testing \
+            -project AniReel.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "id=$UDID" \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_PREVIEWS=NO || exit 1
+          PRODUCTS=$(xcodebuild -project AniReel.xcodeproj -scheme "$SCHEME" -configuration Debug -sdk iphonesimulator -showBuildSettings 2>/dev/null \
+            | awk -F ' = ' '/ BUILT_PRODUCTS_DIR = /{print $2; exit}')
+          xcrun simctl install "$UDID" "$PRODUCTS/AniReel.app"
+          # Fresh guest quota (kept in the Keychain) and pre-granted add-only Photos access,
+          # so the clip saves without a permission alert. The test still taps through one if shown.
+          xcrun simctl keychain "$UDID" reset || true
+          xcrun simctl privacy "$UDID" grant photos-add com.anireel.app || true
+
+          xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$OUT" &
+          RECORDER=$!
+          sleep 2
+          xcodebuild test-without-building \
+            -project AniReel.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "id=$UDID" \
+            -only-testing:AniReelUITests \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_PREVIEWS=NO
+          STATUS=$?
+          sleep 1
+          kill -INT "$RECORDER"
+          wait "$RECORDER"
+          ls -lh "$OUT"
+          exit $STATUS
+    artifacts:
+      - $CM_WORKSPACE/anireel-demo.mp4
+      - anireel-demo.mp4

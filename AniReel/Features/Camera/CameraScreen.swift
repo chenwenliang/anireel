@@ -376,6 +376,7 @@ private struct StyleTabs: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+                .accessibilityIdentifier("camera.styleTab")
             }
         }
         .animation(.snappy, value: selected)
@@ -563,6 +564,7 @@ private struct RecordButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(isRecording ? LocalizedStringKey("Stop") : "Record"))
+        .accessibilityIdentifier("camera.record")
     }
 }
 
@@ -571,5 +573,6 @@ private struct DemoBadge: View {
     var body: some View {
         Pill(text: Text("Demo frames"), systemImage: "sparkles.tv")
             .accessibilityLabel(Text("Demo frames. No camera on this device, showing a generated scene."))
+            .accessibilityIdentifier("camera.demoBadge")
     }
 }

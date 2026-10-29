@@ -17,6 +17,7 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.Palette.secondaryInk)
                     .opacity(page == lastPage ? 0 : 1)
                     .disabled(page == lastPage)
+                    .accessibilityIdentifier("onboarding.skip")
             }
             .padding(.horizontal, Theme.Spacing.gutter)
             .padding(.top, 12)
